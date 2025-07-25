@@ -92,8 +92,8 @@ interface Project {
 }
 
 const { slug } = Astro.params;
-const API = import.meta.env.PUBLIC_STRAPI_URL || "http://localhost:1337/api";
-const STRAPI_BASE = import.meta.env.PUBLIC_STRAPI_URL?.replace('/api', '') || "http://localhost:1337";
+const API = import.meta.env.PUBLIC_STRAPI_URL;
+const STRAPI_BASE = import.meta.env.PUBLIC_STRAPI_URL?.replace('/api', '');
 
 let project: Project | null = null;
 let client = "Project Not Found";

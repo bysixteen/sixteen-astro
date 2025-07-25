@@ -352,7 +352,15 @@ function bakeTextureOnCanvas(texture) {
  */
 function extractProjectData() {
   const projectItems = document.querySelectorAll("#project-data .project-item");
-
+  
+  console.log(`Found ${projectItems.length} project items in DOM`);
+  
+  if (projectItems.length === 0) {
+    console.error('No project items found in DOM!');
+    console.log('Project data container:', document.getElementById('project-data'));
+    console.log('Project data container innerHTML:', document.getElementById('project-data')?.innerHTML);
+  }
+  
   projectData = Array.from(projectItems).map((item, index) => {
     const data = {
       id: index,
@@ -362,8 +370,11 @@ function extractProjectData() {
       url: item.dataset.url,
     };
     
+    console.log(`Project ${index}:`, data);
     return data;
   });
+  
+  console.log(`Extracted ${projectData.length} projects for gallery`);
 }
 
 /**
@@ -377,8 +388,19 @@ function extractProjectData() {
  */
 function initThreeScene() {
   const canvas = document.getElementById("project-slider");
+  const canvasStatusElement = document.getElementById('canvas-status');
+  
   if (!canvas) {
+    console.error('Canvas element not found!');
+    if (canvasStatusElement) {
+      canvasStatusElement.textContent = 'Canvas not found';
+    }
     return;
+  }
+  
+  console.log('Canvas found, initializing Three.js scene...');
+  if (canvasStatusElement) {
+    canvasStatusElement.textContent = 'Initializing...';
   }
   
   // Scene setup
@@ -464,6 +486,11 @@ function initThreeScene() {
 	);
 
 	// Remove webglcontextrestored event handler referencing reinitializeGallery
+  
+  console.log('Three.js scene initialized successfully');
+  if (canvasStatusElement) {
+    canvasStatusElement.textContent = 'Ready';
+  }
 }
 
 /**
@@ -1931,9 +1958,51 @@ function updateHoverLabelPositionOptimized() {
 const UNIFORM_UPDATE_INTERVAL = 2; // Update uniforms every 2 frames during heavy animations
 const HOVER_UPDATE_INTERVAL = 2; // Update hover labels every 2 frames
 
-// Remove DOMContentLoaded fallback. Only initialize gallery on 'page:transition:end'.
+// Initialize gallery on 'page:transition:end' or DOMContentLoaded as fallback
 function startGallery() {
   if (window.portfolioGalleryInitialized) return;
+  
+  // Update status
+  const galleryStatusElement = document.getElementById('gallery-status');
+  if (galleryStatusElement) {
+    galleryStatusElement.textContent = 'Initializing...';
+  }
+  
+  console.log('Starting gallery initialization...');
+  
+  // Check if project data is available
+  const projectItems = document.querySelectorAll("#project-data .project-item");
+  if (projectItems.length === 0) {
+    console.log('No project data found, waiting...');
+    if (galleryStatusElement) {
+      galleryStatusElement.textContent = 'Waiting for data...';
+    }
+    // Retry after a short delay
+    setTimeout(() => {
+      if (!window.portfolioGalleryInitialized) {
+        startGallery();
+      }
+    }, 500);
+    return;
+  }
+  
+  // Also check global flag
+  if (!window.projectDataReady) {
+    console.log('Project data not ready yet, waiting...');
+    if (galleryStatusElement) {
+      galleryStatusElement.textContent = 'Waiting for data flag...';
+    }
+    // Retry after a short delay
+    setTimeout(() => {
+      if (!window.portfolioGalleryInitialized) {
+        startGallery();
+      }
+    }, 500);
+    return;
+  }
+  
+  console.log(`Found ${projectItems.length} project items, proceeding with initialization`);
+  
   extractProjectData();
   initThreeScene();
   createGallery();
@@ -1941,6 +2010,40 @@ function startGallery() {
   startRenderLoop();
   createHoverTitle();
   window.portfolioGalleryInitialized = true;
+  
+  // Update status
+  if (galleryStatusElement) {
+    galleryStatusElement.textContent = 'Running';
+  }
+  console.log('Gallery initialization complete with full features');
 }
 
-window.addEventListener('page:transition:end', startGallery);
+// Make startGallery globally available
+window.startGallery = startGallery;
+
+// Listen for page transition end (for page transitions)
+window.addEventListener('page:transition:end', () => {
+  console.log('Page transition end event fired');
+  startGallery();
+});
+
+// Listen for custom project data ready event
+window.addEventListener('projectData:ready', (event) => {
+  console.log('Project data ready event fired', event.detail);
+  startGallery();
+});
+
+// Fallback: also initialize on DOMContentLoaded if not already initialized
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('DOMContentLoaded event fired');
+  // Wait a bit to ensure data is loaded, then try to initialize
+  setTimeout(() => {
+    if (!window.portfolioGalleryInitialized) {
+      console.log('Initializing gallery from DOMContentLoaded fallback');
+      startGallery();
+    }
+  }, 1000);
+});
+
+// Debug: Log when the script loads
+console.log('Gallery script loaded and event listeners set up');

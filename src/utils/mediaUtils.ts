@@ -1,6 +1,4 @@
-const STRAPI_BASE =
-  import.meta.env.PUBLIC_STRAPI_URL?.replace("/api", "") ||
-  "http://localhost:1337";
+const STRAPI_BASE = import.meta.env.PUBLIC_STRAPI_URL?.replace("/api", "");
 
 export function renderMedia(asset: any, classes = "w-full h-auto", animate = "media") {
   if (!asset) return null;

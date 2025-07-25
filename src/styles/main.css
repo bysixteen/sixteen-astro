@@ -1,13 +1,13 @@
+/* ==========================================================================
+   GOOGLE FONTS IMPORT (must be first)
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-weight: 400; /* Adjust as needed */
 }
-
-/* ==========================================================================
-   GOOGLE FONTS IMPORT (must be first)
-   ========================================================================== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* ==========================================================================
    CUSTOM FONTS
