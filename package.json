@@ -12,8 +12,7 @@
     "dev": "npx strapi develop",
     "dev:astro": "astro dev",
     "develop": "npx strapi develop",
-    "start": "npx strapi start",
-    "postinstall": "npx strapi build",
+    "start": "npx strapi build && npx strapi start",
     "strapi": "npx strapi",
     "upgrade": "npx @strapi/upgrade latest",
     "upgrade:dry": "npx @strapi/upgrade latest --dry"
