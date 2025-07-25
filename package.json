@@ -12,7 +12,8 @@
     "dev": "npx strapi develop",
     "dev:astro": "astro dev",
     "develop": "npx strapi develop",
-    "start": "NODE_OPTIONS='--max-old-space-size=4096' npx strapi start",
+    "start": "./start.sh",
+    "postbuild": "echo 'Build completed successfully'",
     "strapi": "npx strapi",
     "upgrade": "npx @strapi/upgrade latest",
     "upgrade:dry": "npx @strapi/upgrade latest --dry"
