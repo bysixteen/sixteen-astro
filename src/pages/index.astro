@@ -1,7 +1,8 @@
 ---
 let works = [];
 try {
-  const worksRes = await fetch(`http://localhost:1337/api/works?populate=*`);
+  //const worksRes = await fetch(`http://localhost:1337/api/works?populate=*`);
+  const worksRes = await fetch(`https://your-strapi-render-url.onrender.com/api/works?populate=*`);
   if (worksRes.ok) {
     const response = await worksRes.json();
     works = response.data || [];

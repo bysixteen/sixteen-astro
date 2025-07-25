@@ -190,7 +190,12 @@ try {
           </div>
           <div>
             <span class="block text-xs sm:text-sm font-mono brand-typography text-ink-text-secondary mb-2">ROLE</span>
-            <span class="block text-base font-normal text-ink-text-cream">{project?.Positions?.[0]?.Name || project?.Industry || '—'}</span>
+            <span class="block text-base font-normal text-ink-text-cream">
+              {project?.Positions && project.Positions.length > 0 
+                ? project.Positions.map((position: any) => position.Name).join(', ')
+                : '—'
+              }
+            </span>
           </div>
           <div>
             <span class="block text-xs sm:text-sm font-mono brand-typography text-ink-text-secondary mb-2">COMPLETED</span>

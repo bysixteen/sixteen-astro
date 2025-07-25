@@ -37,7 +37,7 @@
     "react-dom": "^18.0.0",
     "react-router-dom": "^5.3.4",
     "strapi-plugin-populate-deep": "^3.0.1",
-    "styled-components": "^5.3.11",
+    "styled-components": "5.3.3",
     "tailwindcss": "^3.4.3",
     "three": "^0.178.0"
   },

@@ -449,3 +449,45 @@ button:focus .button-text {
   font-size: 24px;
   line-height: 1.7;
 }
+
+/* Phones section sticky text styling */
+.phones-text {
+  transition: all 0.3s ease;
+}
+
+/* CSS-only sticky fallback */
+.phones-text--sticky {
+  position: sticky;
+  top: 120px;
+  z-index: 10;
+  background: rgba(43, 42, 40, 0.95);
+  padding: 20px;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.phones-text--pinned {
+  position: sticky !important;
+  top: 120px !important;
+  z-index: 10 !important;
+  background: rgba(43, 42, 40, 0.95) !important;
+  padding: 20px !important;
+  border-radius: 8px !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Debug styling to make it more visible */
+#phones-section {
+  min-height: 100vh;
+  position: relative;
+}
+
+#phones-text {
+  position: relative;
+}
+
+#phones-section .col-span-6 > .w-full:last-child {
+  margin-bottom: 0 !important;
+}
