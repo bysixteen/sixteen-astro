@@ -134,51 +134,8 @@ try {
 
   if (!res.ok) {
     console.log('API request failed with status:', res.status);
-    
-    // Temporary fallback for development - remove this once Strapi Cloud has content
-    if (slug === 'careem') {
-      project = {
-        id: 1,
-        Client: "Careem",
-        Subtitle: "Ride-hailing platform redesign",
-        Overview: "A comprehensive redesign of the Careem ride-hailing platform focusing on user experience and driver engagement.",
-        Year: "2023",
-        Industry: "Transportation",
-        HeroMedia: {
-          id: 1,
-          url: "/careem - thumb.png",
-          mime: "image/png",
-          alternativeText: "Careem project thumbnail"
-        },
-        Agency: {
-          id: 1,
-          Name: "Sixteen"
-        },
-        Positions: [
-          { id: 1, Name: "Lead Designer" },
-          { id: 2, Name: "UX Researcher" }
-        ],
-        Services: [
-          { id: 1, Name: "UI/UX Design" },
-          { id: 2, Name: "User Research" }
-        ],
-        Sections: [],
-        Credit: [],
-        MyRole: {
-          id: 1,
-          Title: "Lead Designer",
-          Body: "Led the complete redesign of the Careem platform, focusing on improving user experience and driver engagement."
-        },
-        IntroSection: [],
-        ExternalLink: { Link: "https://careem.com" },
-        liveUrl: "https://careem.com"
-      };
-      client = project.Client;
-      liveUrl = project.liveUrl;
-    } else {
-      project = null;
-      client = "Project Not Found";
-    }
+    project = null;
+    client = "Project Not Found";
   } else {
     const responseData = await res.json();
     const workData = responseData?.data?.[0];
