@@ -1,4 +1,4 @@
-import { gsap } from "gsap";
+
 
 const TRANSITION_DEFAULTS = {
   duration: 1.2,

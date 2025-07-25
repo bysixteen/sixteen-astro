@@ -1,6 +1,3 @@
-import { gsap } from "gsap";
-import { CustomEase } from "gsap/CustomEase";
-
 console.log("nav-splittext.js loaded");
 
 // Debug function to log availability positions
@@ -58,18 +55,11 @@ window.logAvailabilityPositions = () => {
   }
 };
 
-// Try to import SplitText (premium plugin)
-let SplitText;
-try {
-  const splitTextModule = await import("gsap/SplitText");
-  SplitText = splitTextModule.SplitText;
-  gsap.registerPlugin(SplitText);
-} catch (error) {
-  console.warn("SplitText not available (premium plugin):", error);
-  SplitText = null;
-}
-
+// Register GSAP plugins
 gsap.registerPlugin(CustomEase);
+
+// Note: SplitText is a premium plugin, so we'll handle it gracefully
+let SplitText = null;
 
 CustomEase.create("customEase", "0.65, 0.05, 0, 1");
 

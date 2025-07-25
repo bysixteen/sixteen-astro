@@ -1,4 +1,4 @@
-import gsap from 'gsap';
+
 
 document.addEventListener('DOMContentLoaded', () => {
   const main = document.getElementById('main-content');
