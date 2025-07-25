@@ -1,0 +1,33 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout showFooter={true} showHeader={true} showBackButton={true}>
+  <section class="content-section flex items-center justify-center min-h-[60vh] text-center px-6">
+    <div class="w-full max-w-2xl">
+      <h1 class="text-[clamp(4rem,15vw,12rem)] font-normal font-sans mb-8 text-ink-text-primary-default tracking-[-0.04em]" data-animate="">
+        404
+      </h1>
+      <h2 class="text-2xl font-sans mb-6 text-ink-text-cream" data-animate="">
+        Page Not Found
+      </h2>
+      <p class="text-lg text-ink-text-secondary mb-12 leading-relaxed" data-animate="">
+        The page you're looking for doesn't exist or has been moved.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center" data-animate="">
+        <a 
+          href="/" 
+          class="inline-flex items-center justify-center px-8 py-4 bg-ink-text-primary-default text-ink-background-primary hover:bg-ink-text-primary-hover transition-colors duration-200 font-mono text-sm uppercase tracking-wider"
+        >
+          Go Home
+        </a>
+        <a 
+          href="/works" 
+          class="inline-flex items-center justify-center px-8 py-4 border border-ink-text-primary-default text-ink-text-primary-default hover:bg-ink-text-primary-default hover:text-ink-background-primary transition-colors duration-200 font-mono text-sm uppercase tracking-wider"
+        >
+          View Works
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout> 

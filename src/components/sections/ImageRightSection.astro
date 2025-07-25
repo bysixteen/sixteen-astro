@@ -1,0 +1,39 @@
+---
+import { renderMedia, renderRichText } from '../../utils/mediaUtils';
+
+interface Props {
+  section: any;
+}
+
+const { section } = Astro.props;
+---
+
+<section class="content-section mb-12">
+  <div class="grid grid-cols-12 gap-6 px-grid">
+    <div class="col-start-1 col-span-3">
+      {section.Title && (
+        <h3 class="font-mono text-xs uppercase text-ink-text-secondary mb-4" data-animate="">
+          {section.Title}
+        </h3>
+      )}
+      {section.Body && (
+        <div class="text-lg leading-relaxed text-ink-text-cream" data-animate="fade-up" set:html={renderRichText(section.Body)} />
+      )}
+    </div>
+    {(() => {
+      let img = section.Image;
+      if (img?.data?.attributes) img = img.data.attributes;
+      else if (img?.attributes) img = img.attributes;
+      else if (img?.data) img = img.data;
+      else if (Array.isArray(img)) img = img[0];
+
+      img = img || section.image || (section.media?.data ? (Array.isArray(section.media.data) ? section.media.data[0] : section.media.data) : section.media);
+
+      if (img && img.url) {
+        return <div class="col-start-7 col-span-6"><div class="w-full" set:html={renderMedia(img)} /></div>;
+      } else {
+        return <div class="col-start-7 col-span-6">Image missing for ContentSectionImageRight ID: {section.id}</div>;
+      }
+    })()}
+  </div>
+</section> 

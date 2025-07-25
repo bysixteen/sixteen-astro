@@ -1,0 +1,65 @@
+---
+import { renderMedia, renderRichText } from '../../utils/mediaUtils';
+
+interface Props {
+  client: string;
+  subtitle?: string;
+  services?: any[];
+  introSections?: any[];
+  heroMedia?: any;
+}
+
+const { client, subtitle, services, introSections, heroMedia } = Astro.props;
+---
+
+<section class="content-section">
+  {/* Hero Media Section: Full-width image or video */}
+  {
+    heroMedia && (
+      <div class="grid grid-cols-12 gap-6 px-grid mb-0 md:mb-40">
+        <div class="col-span-12" set:html={renderMedia(heroMedia)} />
+      </div>
+    )
+  }
+  <div class="grid grid-cols-12 px-grid">
+    <div class="col-start-1 col-end-4">
+      <h2
+        class="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-sans pb-20 text-ink-text-cream"
+        data-animate=""
+      >
+        {client} — {subtitle}
+      </h2>
+      {
+        services && services.length > 0 && (
+          <div class="flex flex-wrap gap-2">
+            {services.map((service: any) => (
+              <span class="project-tag">{service.Name}</span>
+            ))}
+          </div>
+        )
+      }
+    </div>
+    <div class="col-start-7 col-span-6">
+      {
+        introSections &&
+          introSections.map((section: any, index: number) => (
+            <div class={index > 0 ? "mt-20" : "mb-20"}>
+              <h3
+                class="font-mono text-xs uppercase text-ink-text-secondary mb-4"
+                data-animate=""
+              >
+                {section.Title}
+              </h3>
+              {section.Body && (
+                <div
+                  class="overview text-ink-text-cream"
+                  data-animate="fade-up"
+                  set:html={renderRichText(section.Body)}
+                />
+              )}
+            </div>
+          ))
+      }
+    </div>
+  </div>
+</section> 

@@ -1,0 +1,268 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Button from "../../components/ui/Button.astro";
+import IntroSection from "../../components/sections/IntroSection.astro";
+import MediaSection from "../../components/sections/MediaSection.astro";
+import VimeoSection from "../../components/sections/VimeoSection.astro";
+import TextSection from "../../components/sections/TextSection.astro";
+import ImageRightSection from "../../components/sections/ImageRightSection.astro";
+import PhonesSection from "../../components/sections/PhonesSection.astro";
+import CreditsSection from "../../components/sections/CreditsSection.astro";
+import queryString from 'query-string';
+
+export const prerender = false;
+
+// Type definitions
+interface MediaAsset {
+  id: number;
+  url: string;
+  mime: string;
+  width?: number;
+  height?: number;
+  alternativeText?: string;
+  data?: MediaAsset;
+  formats?: {
+    small?: { url: string };
+    medium?: { url: string };
+    large?: { url: string };
+  };
+}
+
+interface Agency {
+  id: number;
+  Name: string;
+}
+
+interface Position {
+  id: number;
+  Name: string;
+}
+
+interface Service {
+  id: number;
+  Name: string;
+}
+
+interface Credit {
+  Position: string;
+  Name: string;
+}
+
+interface MyRole {
+  id: number;
+  Title: string;
+  Body: any;
+}
+
+interface ExternalLink {
+  Link?: string;
+  link?: string;
+}
+
+interface Section {
+  id: number;
+  __component: string;
+  Title?: string;
+  Body?: any;
+  MediaAsset?: MediaAsset;
+  Image?: MediaAsset;
+  VimeoId?: string;
+}
+
+interface Project {
+  id: number;
+  documentId?: string;
+  Client: string;
+  Subtitle?: string;
+  Overview?: any;
+  Year?: string;
+  Industry?: string;
+  HeroMedia?: MediaAsset;
+  Agency?: Agency;
+  Positions?: Position[];
+  Services?: Service[];
+  Sections?: Section[];
+  Credit?: Credit[];
+  MyRole?: MyRole;
+  IntroSection?: any[];
+  ExternalLink?: ExternalLink;
+  liveUrl?: string;
+  live_url?: string;
+  url?: string;
+}
+
+const { slug } = Astro.params;
+const API = import.meta.env.PUBLIC_STRAPI_URL || "http://localhost:1337/api";
+const STRAPI_BASE = import.meta.env.PUBLIC_STRAPI_URL?.replace('/api', '') || "http://localhost:1337";
+
+let project: Project | null = null;
+let client = "Project Not Found";
+let liveUrl: string | undefined = undefined;
+
+const query = queryString.stringify({
+  'filters[Slug][$eq]': slug,
+  'populate[HeroMedia]': true,
+  'populate[Agency]': true,
+  'populate[Positions]': true,
+  'populate[Services]': true,
+  'populate[Credit]': true,
+  'populate[MyRole]': true,
+  'populate[IntroSection]': true,
+  'populate[ExternalLink]': true,
+  'populate[Sections][populate][Image]': '*',
+  'populate[Sections][populate][Media]': '*',
+  'populate[Sections][populate][MediaAsset]': '*',
+  'populate[Sections][populate][media]': '*',
+});
+
+try {
+  if (!slug) {
+    return Astro.redirect('/404');
+  }
+
+  const apiUrl = `${API}/works?${query}`;
+  const res = await fetch(apiUrl, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!res.ok) {
+    project = null;
+    client = "Project Not Found";
+  } else {
+    const responseData = await res.json();
+    const workData = responseData?.data?.[0];
+    if (!workData) {
+      project = null;
+      client = "Project Not Found";
+    } else {
+      const a = workData.attributes ?? workData;
+      project = {
+        id: workData.id,
+        documentId: a.documentId,
+        Client: a.Client,
+        Subtitle: a.Subtitle,
+        Overview: a.Overview,
+        Year: a.Year,
+        Industry: a.Industry,
+        HeroMedia: a.HeroMedia?.data ? a.HeroMedia.data.attributes : null,
+        Agency: a.Agency?.data ? a.Agency.data.attributes : null,
+        Positions: a.Positions?.data ? a.Positions.data.map((pos: any) => pos.attributes) : [],
+        Services: a.Services?.data ? a.Services.data.map((srv: any) => srv.attributes) : [],
+        Sections: a.Sections || [],
+        Credit: a.Credit || [],
+        MyRole: a.MyRole || null,
+        IntroSection: a.IntroSection || [],
+        ExternalLink: a.ExternalLink,
+        liveUrl: a.liveUrl,
+        live_url: a.live_url,
+        url: a.url
+      };
+      
+      // Debug log - remove this after confirming it works
+      console.log('MyRole data:', a.MyRole);
+      console.log('Project MyRole:', project.MyRole);
+      client = project?.Client || "Project Not Found";
+      liveUrl = project?.ExternalLink?.Link || project?.ExternalLink?.link || project?.liveUrl || project?.live_url || project?.url;
+    }
+  }
+} catch (error) {
+  project = null;
+  client = "Project Not Found";
+}
+
+
+---
+
+
+
+<Layout showFooter={false} showHeader={false} showBackButton={true}>
+  {/* Hero Section: Client name and meta info */}
+  <section class="hero-section min-h-[400px] h-[50vh]">
+    <div class="grid grid-cols-12 gap-6 px-grid items-center h-full">
+      <div class="col-start-2 col-span-10">
+        <h1 class="text-2xl sm:text-4xl lg:text-[200px] lg:leading-[1.05] font-normal font-sans mb-12 text-ink-text-primary-default tracking-[-0.04em] text-center" data-animate="">{client}</h1>
+        <div class="flex justify-center gap-16 text-lg">
+          <div>
+            <span class="block text-xs sm:text-sm font-mono brand-typography text-ink-text-secondary mb-2">AGENCY</span>
+            <span class="block text-base font-normal text-ink-text-cream">{project?.Agency?.Name || '—'}</span>
+          </div>
+          <div>
+            <span class="block text-xs sm:text-sm font-mono brand-typography text-ink-text-secondary mb-2">ROLE</span>
+            <span class="block text-base font-normal text-ink-text-cream">{project?.Positions?.[0]?.Name || project?.Industry || '—'}</span>
+          </div>
+          <div>
+            <span class="block text-xs sm:text-sm font-mono brand-typography text-ink-text-secondary mb-2">COMPLETED</span>
+            <span class="block text-base font-normal text-ink-text-cream">{project?.Year || '—'}</span>
+          </div>
+          {liveUrl && (
+            <div>
+              <span class="block text-xs sm:text-sm font-mono brand-typography text-ink-text-secondary mb-2">Live site</span>
+              <a href={liveUrl} target="_blank" rel="noopener" class="block text-base sm:text-lg font-normal text-ink-text-cream hover:text-ink-text-primary underline">
+                {liveUrl.replace(/^https?:\/\//, '')}
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* Intro Section: Project overview and role */}
+  <IntroSection 
+    client={project?.Client || ''}
+    subtitle={project?.Subtitle}
+    services={project?.Services}
+    introSections={project?.IntroSection}
+    heroMedia={project?.HeroMedia}
+  />
+
+
+  {/* Dynamic Content Sections: Media, Vimeo, Text, Image-Right, etc. */}
+  {project?.Sections && project.Sections.length > 0 && (
+    project.Sections.map((section: any, index: number) => {
+      if ([
+        'project.content-section-media-asset',
+        'ContentSectionMedia',
+        'content-section-media',
+        'project.media'
+      ].includes(section.__component)) {
+        return <MediaSection section={section} />;
+      } else if (section.__component === 'project.vimeo' && section.VimeoId) {
+        return <VimeoSection section={section} />;
+      } else if (section.__component === 'project.section') {
+        return <TextSection section={section} />;
+      } else if (section.__component === 'project.content-section-image-right') {
+        return <ImageRightSection section={section} />;
+      } else if (section.__component === 'project.content-section-phones') {
+        return <PhonesSection section={section} />;
+      } else {
+        // Fallback for unrecognized components
+        return (
+          <section class="content-section">
+            <div class="col-span-12">
+              <div>Unknown Component: {section.__component}</div>
+            </div>
+          </section>
+        );
+      }
+    })
+  )}
+
+  {/* Credits Section: Project credits listing */}
+  {project?.Credit && project.Credit.length > 0 && (
+    <CreditsSection credits={project.Credit} />
+  )}
+
+  {/* Error Section: Fallback if project not found */}
+  {project ? (
+    <div></div>
+  ) : (
+    <div style="color: #f87171; background: #18181b; padding: 2rem; border-radius: 1rem; margin-top: 2rem;">
+      <strong>Error:</strong> Project not found or Strapi data missing.<br />
+      Check your Strapi API and project slugs.
+    </div>
+  )}
+</Layout>
+

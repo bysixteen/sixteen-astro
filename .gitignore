@@ -1,5 +1,6 @@
 # build output
 dist/
+build/
 
 # generated types
 .astro/
@@ -16,9 +17,35 @@ pnpm-debug.log*
 # environment variables
 .env
 .env.production
+.env.local
+.env.development
+
+# Strapi specific
+.strapi/
+.strapi-updater.json
+exports/
+*.cache
+
+# Vercel
+.vercel/
 
 # macOS-specific files
 .DS_Store
 
 # jetbrains setting folder
 .idea/
+
+# VSCode
+.vscode/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads (if you have a local uploads folder)
+public/uploads/

@@ -1,0 +1,75 @@
+---
+interface FooterProps {
+  location?: string;
+  tagline?: string;
+}
+
+const location = Astro.props.location ?? 'MCR';
+const propRes = await fetch('http://localhost:1337/api/proposition?populate=*');
+const { data: propData } = await propRes.json();
+const Proposition = propData?.attributes?.Body ?? propData?.Body ?? '';
+
+
+// Get today's date in DD.MM.YY format
+const today = new Date();
+const todayFormatted = today.toLocaleDateString('en-GB', {
+  day: '2-digit',
+  month: '2-digit',
+  year: '2-digit'
+}).replace(/\//g, '.');
+---
+
+<footer class="footer">
+  <div class="grid grid-cols-12 items-center w-full px-6 py-4 md:py-5">
+    <!-- First div - 2 columns -->
+    <div class="col-span-2 flex justify-start gap-2">
+      <span class="footer__location">{location} [ ©2025 ]</span>
+      <span class="footer__separator">/</span>
+      <span class="footer__date">{todayFormatted}</span>
+    </div>
+
+    <!-- Second div - 2 columns -->
+    <div class="col-span-2 flex justify-start">
+      <div class="flex items-center">
+        <span class="footer__time" id="footer-clock">--:--:--</span>
+      </div>
+    </div>
+
+    <!-- Third div - spans the rest (6 columns) -->
+    <div class="col-span-6 flex justify-start">
+      <span class="footer__tagline">{Proposition}</span>
+    </div>
+
+    <!-- Navigation Controls - right justified (2 columns) -->
+    <div class="col-span-2 flex justify-end">
+      <div class="navigation-controls">
+        <span class="navigation-controls__text text-xs">[ Scroll ] or [ </span>
+        <span class="navigation-controls__arrow" id="key-arrow-left">←</span>
+        <span class="navigation-controls__text text-xs"> / </span>
+        <span class="navigation-controls__arrow" id="key-arrow-right">→</span>
+        <span class="navigation-controls__text text-xs"> ]</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function updateClock() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-GB', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    const clockElement = document.getElementById('footer-clock');
+    if (clockElement) {
+      clockElement.textContent = timeString;
+    }
+  }
+
+  // Update immediately and then every second
+  updateClock();
+  setInterval(updateClock, 1000);
+</script> 

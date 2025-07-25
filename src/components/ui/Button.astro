@@ -1,0 +1,60 @@
+---
+export interface Props {
+  text?: string;
+  type?: 'button' | 'submit' | 'reset';
+  className?: string;
+  dataAnimate?: string;
+  back?: boolean;
+  href?: string;
+  onclick?: string;
+}
+const { text = 'Button', type = 'button', className = '', dataAnimate = '', back = false, href, onclick } = Astro.props;
+---
+{href ? (
+  <a
+    href={href}
+    class={`
+    bg-[var(--color-interactive-background-primary-default)]
+    hover:bg-[var(--color-interactive-background-primary-hovered)]
+    rounded-full
+    flex flex-row items-center justify-center
+    px-4
+    h-8
+    mono-text
+    not-italic
+    transition
+    ${className}
+  `}
+    data-animate=""
+  >
+    <span class="button-clip u--rel">
+      <span data-split="letters" class="button-text">
+        {back ? '← ' : ''}<slot>{text}</slot>
+      </span>
+    </span>
+  </a>
+) : (
+  <button
+    type={type}
+    class={`
+    bg-[var(--color-interactive-background-primary-default)]
+    hover:bg-[var(--color-interactive-background-primary-hovered)]
+    rounded-full
+    flex flex-row items-center justify-center
+    px-4
+    h-8
+    mono-text
+    not-italic
+    transition
+    ${className}
+  `}
+    data-animate=""
+    onclick={onclick}
+  >
+    <span class="button-clip u--rel">
+      <span data-split="letters" class="button-text">
+        {back ? '← ' : ''}<slot>{text}</slot>
+      </span>
+    </span>
+  </button>
+)} 

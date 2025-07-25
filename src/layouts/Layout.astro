@@ -1,22 +1,65 @@
+---
+import '../styles/main.css';
+import Header from '../components/layout/Header.astro';
+import Footer from '../components/layout/Footer.astro';
+import Button from '../components/ui/Button.astro';
+
+export interface Props {
+	title?: string;
+	showFooter?: boolean;
+	showHeader?: boolean;
+	showBackButton?: boolean;
+	backUrl?: string;
+}
+
+const { title = "Sixteen", showFooter = true, showHeader = true, showBackButton = false, backUrl = '/' } = Astro.props;
+---
+
 <!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
+		<meta name="description" content="Astro description" />
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="preload" href="/fonts/AtAeroTRIAL-Retina.otf" as="font" type="font/otf" crossorigin />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
+		<title>{title}</title>
+		
+		<style>
+			/* Initially hide main content to prevent flash during transitions */
+			#main-content {
+				opacity: 0;
+			}
+		</style>
 	</head>
 	<body>
-		<slot />
+		{showHeader ? (
+			<Header showBackButton={showBackButton} backUrl={backUrl} />
+		) : showBackButton && (
+			<div class="nav__header">
+				<div class="grid grid-cols-12 items-start w-full py-4 md:py-5">
+					<div class="col-span-2 flex justify-start items-start">
+						<Button back href={backUrl} dataAnimate="back-button">BACK</Button>
+					</div>
+					<div class="col-span-8"></div>
+					<div class="col-span-2"></div>
+				</div>
+			</div>
+		)}
+		<main id="main-content">
+			<slot />
+		</main>
+		<!-- Loader must be visible immediately -->
+		<div class="loader-wrap">
+			<svg id="transitionSVG" viewBox="0 0 100 100" preserveAspectRatio="none">
+				<path id="transitionPath2" fill="#00f894" d="M 0 0 V 100 Q 50 100 100 100 V 0 Z"></path>
+				<path id="transitionPath" fill="#2B2A28" d="M 0 0 V 100 Q 50 100 100 100 V 0 Z"></path>
+			</svg>
+		</div>
+		{showFooter && <Footer />}
+		<script type="module" src="/src/scripts/nav-splittext.js"></script>
+		<script type="module" src="/src/scripts/logo-intro.js"></script>
+		<script type="module" src="/src/scripts/page-transition.js"></script>
 	</body>
 </html>
-
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-	}
-</style>

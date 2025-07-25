@@ -1,0 +1,24 @@
+---
+import { renderRichText } from '../../utils/mediaUtils';
+
+interface Props {
+  section: any;
+}
+
+const { section } = Astro.props;
+---
+
+<section class="content-section">
+  <div class="grid grid-cols-12 gap-6 px-grid">
+    <div class="col-start-7 col-span-6">
+      {section.Title && (
+        <h3 class="font-mono text-xs uppercase text-ink-text-secondary mb-4" data-animate="">
+          {section.Title}
+        </h3>
+      )}
+      {section.Body && (
+        <div class="text-lg leading-relaxed text-ink-text-cream" data-animate="fade-up" set:html={renderRichText(section.Body)} />
+      )}
+    </div>
+  </div>
+</section> 

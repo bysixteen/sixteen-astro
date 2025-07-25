@@ -1,0 +1,41 @@
+---
+interface Props {
+  credits: any[];
+}
+
+const { credits } = Astro.props;
+---
+
+<section class="content-section">
+  <div class="grid grid-cols-12 gap-6 px-grid">
+    <div class="col-start-1 col-end-4">
+      <h3 class="font-mono text-xs uppercase text-ink-text-secondary" data-animate="">
+        CREDITS
+      </h3>
+    </div>
+    <div class="col-start-5 col-end-10">
+      {credits && credits.length > 0 && (
+        <div class="grid grid-cols-2 gap-8">
+          {/* First column: up to 4 credits */}
+          <div class="space-y-8">
+            {credits.slice(0, 4).map((credit: any) => (
+              <div class="text-ink-text-primary" data-animate="fade-up">
+                <div class="text-xs font-mono uppercase text-ink-text-secondary">{credit.Position}</div>
+                <div class="text-xs font-mono uppercase text-ink-text-primary">{credit.Name}</div>
+              </div>
+            ))}
+          </div>
+          {/* Second column: the rest */}
+          <div class="space-y-8">
+            {credits.slice(4).map((credit: any) => (
+              <div class="text-ink-text-primary" data-animate="fade-up">
+                <div class="text-xs font-mono uppercase text-ink-text-secondary">{credit.Position}</div>
+                <div class="text-xs font-mono uppercase text-ink-text-primary">{credit.Name}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+</section> 

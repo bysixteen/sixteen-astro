@@ -1,11 +1,66 @@
 ---
-import Welcome from '../components/Welcome.astro';
+let works = [];
+try {
+  const worksRes = await fetch(`http://localhost:1337/api/works?populate=*`);
+  if (worksRes.ok) {
+    const response = await worksRes.json();
+    works = response.data || [];
+  } else {
+    console.error('Failed to fetch works:', worksRes.status);
+  }
+} catch (error) {
+  console.error('Error fetching works:', error);
+}
+
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import '../styles/main.css';
 ---
-
 <Layout>
-	<Welcome />
+  <div class="grid grid-cols-12 gap-6 px-grid">
+    <div class="px-6 w-full mx-auto">
+      <canvas id="project-slider" class="fixed top-0 left-0 w-screen h-screen z-10 pointer-events-auto"></canvas>
+      <main id="content-holder" role="main" tabindex="-1">
+        <div id="project-data" style="display:none;">
+          {works?.length
+            ? works.map((item: any) => {
+                const a = item.attributes ?? item;
+                const client = a.Client;
+                const slug   = a.Slug;
+                
+                let imgUrl = "https://via.placeholder.com/400x300/333333/ffffff?text=No+Image";
+                
+                if (a.ThumbImage?.data?.attributes) {
+                  const thumb = a.ThumbImage.data.attributes;
+                  const thumbPath = thumb.formats?.medium?.url
+                                  || thumb.formats?.small?.url
+                                  || thumb.formats?.thumbnail?.url
+                                  || thumb.url;
+                  
+                  if (thumbPath) {
+                    imgUrl = `http://localhost:1337${thumbPath}`;
+                  }
+                }
+          
+                return (
+                  <div 
+                    class="project-item"
+                    data-title={client}
+                    data-category={a.Type ?? '—'}
+                    data-image={imgUrl}
+                    data-url={`/works/${slug}`}
+                    style="display: none;"
+                  >
+                    {client} - {a.Type ?? '—'}
+                  </div>
+                );
+              })
+            : <div>No works found from Strapi.</div>}
+          
+        </div>
+        
+
+      </main>
+    </div>
+  </div>
+  <script type="module" src="/src/scripts/gallery.js"></script>
 </Layout>

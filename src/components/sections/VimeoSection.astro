@@ -1,0 +1,25 @@
+---
+interface Props {
+  section: any;
+}
+
+const { section } = Astro.props;
+---
+
+<section class="content-section">
+  <div class="grid grid-cols-12 gap-6 px-grid">
+    <div class="col-start-1 col-span-12">
+      <div class="w-full aspect-video">
+        <iframe
+          src={`https://player.vimeo.com/video/${section.VimeoId}`}
+          class="w-full h-full block"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowfullscreen
+          title="Vimeo video"
+          frameborder="0"
+          data-animate=""
+        ></iframe>
+      </div>
+    </div>
+  </div>
+</section> 

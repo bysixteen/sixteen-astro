@@ -1,0 +1,88 @@
+:root {
+  /* ==========================================================================
+     INK TOKENS (Static content - text & icons)
+     ========================================================================== */
+  /* ink / text / primary / default */
+  --color-ink-text-primary-default: var(--primitive-white);
+  
+  /* ink / text / secondary / subtle */
+  --color-ink-text-secondary-subtle: var(--primitive-grey);
+  
+  /* ink / text / accent / default */
+  --color-ink-text-accent-default: var(--primitive-accent);
+  
+  /* ink / text / cream / default */
+  --color-ink-text-cream-default: var(--primitive-cream);
+  
+  /* ink / icon / primary / default */
+  --color-ink-icon-primary-default: var(--primitive-white);
+  
+  /* ink / icon / secondary / subtle */
+  --color-ink-icon-secondary-subtle: var(--primitive-grey);
+  
+  /* ink / icon / accent / default */
+  --color-ink-icon-accent-default: var(--primitive-accent);
+
+  /* ==========================================================================
+     INTERACTIVE TOKENS (Actionable elements - buttons, links, toggles)
+     ========================================================================== */
+  /* interactive / background / primary / default */
+  --color-interactive-background-primary-default: var(--primitive-accent);
+  
+  /* interactive / background / primary / hovered */
+  --color-interactive-background-primary-hovered: var(--primitive-accent-hover);
+  
+  /* interactive / background / primary / pressed */
+  --color-interactive-background-primary-pressed: var(--primitive-accent-pressed);
+  
+  /* interactive / text / primary / default */
+  --color-interactive-text-primary-default: var(--primitive-white);
+  
+  /* interactive / border / primary / default */
+  --color-interactive-border-primary-default: var(--primitive-accent);
+  
+  /* interactive / border / primary / focused */
+  --color-interactive-border-primary-focused: var(--primitive-accent-hover);
+
+  /* ==========================================================================
+     INTERFACE TOKENS (Structural, non-interactive elements)
+     ========================================================================== */
+  /* interface / background / fill / default */
+  --color-interface-background-fill-default: var(--primitive-black);
+  
+  /* interface / background / fill / subtle */
+  --color-interface-background-fill-subtle: var(--primitive-dark);
+  
+  /* interface / background / surface / default */
+  --color-interface-background-surface-default: var(--primitive-dark);
+  
+  /* interface / border / divider / default */
+  --color-interface-border-divider-default: var(--primitive-grey);
+  
+  /* interface / border / input / default */
+  --color-interface-border-input-default: var(--primitive-grey);
+  
+  /* interface / background / input / disabled */
+  --color-interface-background-input-disabled: var(--primitive-dark);
+}
+
+/* ==========================================================================
+   THEME OVERRIDES
+   ========================================================================== */
+[data-theme="dark"] {
+  --color-interface-background-fill-default: var(--primitive-black);
+  --color-interface-background-fill-subtle: var(--primitive-dark);
+  --color-ink-text-primary-default: var(--primitive-white);
+  --color-ink-text-secondary-subtle: var(--primitive-grey);
+  --color-interactive-background-primary-default: var(--primitive-accent);
+  --color-interactive-background-primary-hovered: var(--primitive-accent-hover);
+}
+
+[data-theme="light"] {
+  --color-interface-background-fill-default: var(--primitive-cream);
+  --color-interface-background-fill-subtle: var(--primitive-white);
+  --color-ink-text-primary-default: var(--primitive-black);
+  --color-ink-text-secondary-subtle: var(--primitive-grey);
+  --color-interactive-background-primary-default: var(--primitive-accent);
+  --color-interactive-background-primary-hovered: var(--primitive-accent-hover);
+} 

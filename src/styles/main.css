@@ -1,0 +1,451 @@
+html, body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-weight: 400; /* Adjust as needed */
+}
+
+/* ==========================================================================
+   CUSTOM FONTS
+   ========================================================================== */
+@font-face {
+  font-family: 'AtAero';
+  src: url('/fonts/AtAeroTRIAL-Retina.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==========================================================================
+   PROJECT PAGE SPACING
+   ========================================================================== */
+.content-section {
+  @apply pb-4 md:pb-8 lg:pb-64;
+}
+
+/* Hero section with appropriate spacing */
+.hero-section {
+  @apply pb-4 md:pb-8 lg:pb-16;
+}
+
+/* First section (hero) should not have top padding */
+.content-section:first-child {
+  @apply pt-0;
+}
+
+/* ==========================================================================
+   DESIGN SYSTEM PRIMITIVES
+   ========================================================================== */
+:root {
+  --primitive-white: #FFFFFF;
+  --primitive-black: #172121;
+  --primitive-grey: #ABA79F;
+  --primitive-cream: #DED9CE;
+  --primitive-dark: #2C3030;
+  --primitive-accent: #06F795;
+  --primitive-accent-hover: #05e184;
+  --primitive-accent-pressed: #04d474;
+}
+
+/* ==========================================================================
+   DESIGN SYSTEM TOKENS
+   ========================================================================== */
+:root {
+  /* INK TOKENS (Static content - text & icons) */
+  --color-ink-text-primary-default: var(--primitive-white);
+  --color-ink-text-primary-dark: var(--primitive-black);
+  --color-ink-text-secondary-subtle: var(--primitive-grey);
+  --color-ink-text-accent-default: var(--primitive-accent);
+  --color-ink-text-cream-default: var(--primitive-cream);
+  --color-ink-icon-primary-default: var(--primitive-white);
+  --color-ink-icon-secondary-subtle: var(--primitive-grey);
+  --color-ink-icon-accent-default: var(--primitive-accent);
+
+  /* INTERACTIVE TOKENS (Actionable elements - buttons, links, toggles) */
+  --color-interactive-background-primary-default: var(--primitive-accent);
+  --color-interactive-background-primary-hovered: var(--primitive-accent-hover);
+  --color-interactive-background-primary-pressed: var(--primitive-accent-pressed);
+  --color-interactive-text-primary-default: var(--primitive-white);
+  --color-interactive-border-primary-default: var(--primitive-accent);
+  --color-interactive-border-primary-focused: var(--primitive-accent-hover);
+
+  /* INTERFACE TOKENS (Structural, non-interactive elements) */
+  --color-interface-background-fill-default: var(--primitive-black);
+  --color-interface-background-fill-subtle: var(--primitive-dark);
+  --color-interface-background-surface-default: var(--primitive-dark);
+  --color-interface-background-tag-default: var(--primitive-dark);
+  --color-interface-border-divider-default: var(--primitive-grey);
+  --color-interface-border-input-default: var(--primitive-grey);
+  --color-interface-background-input-disabled: var(--primitive-dark);
+}
+
+/* THEME OVERRIDES */
+[data-theme="dark"] {
+  --color-interface-background-fill-default: var(--primitive-black);
+  --color-interface-background-fill-subtle: var(--primitive-dark);
+  --color-ink-text-primary-default: var(--primitive-white);
+  --color-ink-text-secondary-subtle: var(--primitive-grey);
+  --color-interactive-background-primary-default: var(--primitive-accent);
+  --color-interactive-background-primary-hovered: var(--primitive-accent-hover);
+}
+
+[data-theme="light"] {
+  --color-interface-background-fill-default: var(--primitive-cream);
+  --color-interface-background-fill-subtle: var(--primitive-white);
+  --color-ink-text-primary-default: var(--primitive-black);
+  --color-ink-text-secondary-subtle: var(--primitive-grey);
+  --color-interactive-background-primary-default: var(--primitive-accent);
+  --color-interactive-background-primary-hovered: var(--primitive-accent-hover);
+}
+
+/* ==========================================================================
+   TAILWIND IMPORTS
+   ========================================================================== */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   CSS CUSTOM PROPERTIES (Non-color)
+   ========================================================================== */
+:root {
+  --font-size-small: 11px;
+  --transition-fast: 0.2s ease-out;
+  --transition-medium: 0.3s ease;
+  --premium-ease: cubic-bezier(0.8, 0.15, 0.2, 1);
+}
+
+/* ==========================================================================
+   BASE STYLES
+   ========================================================================== */
+@layer base {
+  body {
+    @apply font-sans bg-interface-bg-default text-ink-text-secondary;
+    overflow-x: hidden;
+  }
+  h1 {
+    @apply text-9xl text-ink-text-primary font-sans;
+  }
+}
+
+/* ==========================================================================
+   FOCUS & ACCESSIBILITY
+   ========================================================================== */
+:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+canvas:focus,
+body:focus,
+div:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ==========================================================================
+   TYPOGRAPHY
+   ========================================================================== */
+.brand-typography {
+  @apply mono-text;
+  color: var(--color-ink-text-secondary-subtle);
+}
+
+/* Unified mono text style for consistent application */
+.mono-text {
+  @apply font-mono text-xs uppercase;
+  letter-spacing: normal;
+  line-height: 1;
+  vertical-align: top;
+}
+
+/* Button text with splittext animation (semantic) */
+.button-text {
+  @apply m-0 mono-text;
+  color: var(--color-ink-text-primary-dark);
+  text-shadow: 0px 1.25em currentColor; /* create second line for animation */
+}
+/* Keep colour consistent on hover/focus */
+.button-text.is-animating .char,
+button:hover .button-text,
+button:focus .button-text {
+  color: var(--color-ink-text-primary-dark);
+}
+
+/* Button clipping wrapper to hide second line until animated */
+.button-clip {
+  overflow: hidden;
+  height: 1em;
+  line-height: 1;
+}
+
+/* ==========================================================================
+   PAGE TRANSITIONS
+   ========================================================================== */
+.loader-wrap {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: transparent;
+  opacity: 100;
+  pointer-events: auto;
+  z-index: 99999;
+  transition: opacity var(--transition-medium);
+}
+.loader-wrap.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+#transitionSVG {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  z-index: 10;
+}
+#transitionPath { z-index: 2; }
+#transitionPath2 { z-index: 1; }
+
+/* ==========================================================================
+   NAVIGATION
+   ========================================================================== */
+.nav__header {
+  position: relative;
+  width: 100%;
+  top: 0;
+  background-color: transparent;
+  padding-left: 24px;
+  padding-right: 24px;
+  z-index: 50;
+}
+.nav__brand {
+  @apply inline-block mono-text;
+  transition: opacity var(--transition-fast);
+}
+.nav__link {
+  @apply inline-block relative overflow-hidden;
+  transition: color var(--transition-fast);
+  line-height: 1;
+  vertical-align: top;
+}
+.nav__link:hover,
+.nav__link:focus {
+  color: var(--color-interactive-background-primary-default);
+}
+.nav-text {
+  @apply m-0 mono-text;
+  color: var(--color-ink-text-secondary);
+  text-shadow: 0px 1.25em currentColor;
+}
+.nav-text.is-animating .char,
+.nav__link:hover .nav-text,
+.nav__link:focus .nav-text {
+  color: var(--color-ink-text-primary);
+}
+
+/* ==========================================================================
+   AVAILABILITY LINK
+   ========================================================================== */
+.availability-label {
+  @apply mono-text;
+  color: var(--color-ink-text-secondary);
+}
+.availability-link {
+  @apply inline-block relative mono-text text-right cursor-pointer;
+  color: var(--color-interactive-background-primary-default);
+  height: 1.2em;
+  overflow: hidden;
+  min-width: 240px;
+}
+.availability-default,
+.availability-email {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-width: 240px;
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+.availability-link:hover .availability-default,
+.availability-link:hover .availability-email {
+  transform: none;
+}
+.js-enabled .availability-default,
+.js-enabled .availability-email {
+  transition: none;
+}
+.availability-link,
+.availability-link * {
+  pointer-events: auto;
+}
+
+/* ==========================================================================
+   GALLERY
+   ========================================================================== */
+#project-slider {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  cursor: default;
+  will-change: transform;
+  z-index: 10;
+  transform: translateZ(0);
+}
+#project-slider.card-hover {
+  cursor: pointer;
+}
+#project-data {
+  display: none;
+}
+.project-hover-label {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform;
+  z-index: 20;
+  transition: opacity var(--transition-fast);
+  transform: translateZ(0);
+}
+.project-hover-label__title,
+.project-hover-label__category {
+  @apply mono-text;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  will-change: transform;
+}
+.project-hover-label__title {
+  flex-grow: 1;
+  color: var(--color-ink-text-primary);
+}
+.project-hover-label__category {
+  flex-shrink: 0;
+  color: var(--color-ink-text-primary);
+  font-feature-settings: "kern" 1;
+  text-rendering: optimizeLegibility;
+}
+.navigation-controls {
+  display: flex;
+  align-items: center;
+  color: var(--color-ink-text-secondary);
+}
+.navigation-controls__arrow {
+  @apply cursor-pointer mono-text;
+  padding-left: 4px;
+  padding-right: 4px;
+  color: var(--color-ink-text-secondary);
+}
+.navigation-controls__arrow:hover {
+  color: var(--color-ink-text-primary);
+}
+.navigation-controls__text {
+  @apply mono-text;
+  color: var(--color-ink-text-secondary);
+}
+
+/* ==========================================================================
+   FOOTER
+   ========================================================================== */
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: transparent;
+  z-index: 40;
+}
+.footer__location,
+.footer__date,
+.footer__separator,
+.footer__tagline, 
+.footer__time {
+  @apply mono-text;
+  color: var(--color-ink-text-secondary);
+}
+.footer__separator {
+  color: var(--color-ink-text-secondary);
+  opacity: 0.5;
+}
+
+/* ==========================================================================
+   TEXT ANIMATIONS
+   ========================================================================== */
+.char:not(.availability-default .char):not(.availability-email .char),
+.text-animation,
+.text-animation__character {
+  display: inline-block;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Reset for availability link characters */
+.availability-default .char,
+.availability-email .char {
+  display: inline-block;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* ==========================================================================
+   UTILITY CLASSES
+   ========================================================================== */
+.u--clip { overflow: hidden; }
+.u--rel { position: relative; z-index: 10; }
+
+/* Button-specific text clipping */
+.button-clip {
+  overflow: hidden;
+  height: 1em;
+  line-height: 1;
+}
+.hover-label, 
+.hoverContainer, 
+.hover-label-overlay {
+  will-change: transform;
+  pointer-events: none;
+  transform: translate3d(0,0,0);
+  contain: layout style paint;
+}
+
+/* ==========================================================================
+   PROJECT TAGS
+   ========================================================================== */
+.project-tag {
+  @apply inline-block uppercase mono-text px-2 py-2 text-ink-text-secondary rounded-md;
+  background-color: var(--color-interface-background-tag-default);
+}
+
+@layer utilities {
+  .px-grid {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  @media (min-width: 768px) {
+    .px-grid {
+      padding-left: 40px;
+      padding-right: 40px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .px-grid {
+      padding-left: 80px;
+      padding-right: 80px;
+    }
+  }
+}
+
+.overview {
+  font-size: 24px;
+  line-height: 1.7;
+}

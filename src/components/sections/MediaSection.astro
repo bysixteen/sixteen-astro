@@ -1,0 +1,31 @@
+---
+import { renderMedia } from '../../utils/mediaUtils';
+
+interface Props {
+  section: any;
+}
+
+const { section } = Astro.props;
+---
+
+<section class="content-section">
+  <div class="grid grid-cols-12 gap-6 px-grid">
+    <div class="col-span-12">
+      {(() => {
+        let img = section.Media;
+        if (img?.data?.attributes) img = img.data.attributes;
+        else if (img?.attributes) img = img.attributes;
+        else if (img?.data) img = img.data;
+        else if (Array.isArray(img)) img = img[0];
+
+        img = img || section.media || (section.image?.data ? (Array.isArray(section.image.data) ? section.image.data[0] : section.image.data) : section.image);
+
+        if (img && img.url) {
+          return <div set:html={renderMedia(img)} />;
+        } else {
+          return <div>Image missing for section ID: {section.id}</div>;
+        }
+      })()}
+    </div>
+  </div>
+</section> 

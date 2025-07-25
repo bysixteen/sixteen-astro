@@ -1,0 +1,10 @@
+:root {
+  --primitive-white: #FFFFFF;
+  --primitive-black: #172121;
+  --primitive-grey: #ABA79F;
+  --primitive-cream: #DED9CE;
+  --primitive-dark: #2C3030;
+  --primitive-accent: #06F795;
+  --primitive-accent-hover: #05e184;
+  --primitive-accent-pressed: #04d474;
+} 
