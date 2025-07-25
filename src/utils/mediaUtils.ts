@@ -1,3 +1,12 @@
+// TypeScript interface for import.meta.env
+interface ImportMetaEnv {
+  PUBLIC_STRAPI_URL?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 const STRAPI_BASE =
   import.meta.env.PUBLIC_STRAPI_URL?.replace("/api", "") ||
   "http://localhost:1337";
