@@ -6,6 +6,16 @@ export function renderMedia(asset: any, classes = "w-full h-auto", animate = "me
   if (!asset) return null;
   const mediaAsset = asset.data || asset;
   if (!mediaAsset || !mediaAsset.url) return null;
+  
+  // Helper function to get full URL
+  const getFullUrl = (url: string) => {
+    if (url.startsWith('http')) {
+      return url; // Already a full URL
+    } else {
+      return `${STRAPI_BASE}${url}`; // Prepend base URL
+    }
+  };
+  
   if (mediaAsset.mime?.startsWith("video/")) {
     return `
       <video
@@ -15,28 +25,28 @@ export function renderMedia(asset: any, classes = "w-full h-auto", animate = "me
         loop
         playsinline
         preload="auto"
-        poster="${STRAPI_BASE}${mediaAsset.url}"
+        poster="${getFullUrl(mediaAsset.url)}"
         data-animate=""
       >
-        <source src="${STRAPI_BASE}${mediaAsset.url}" type="${mediaAsset.mime}" />
+        <source src="${getFullUrl(mediaAsset.url)}" type="${mediaAsset.mime}" />
         Your browser does not support the video tag.
       </video>
     `;
   } else {
     const srcset = [
       mediaAsset.formats?.small &&
-        `${STRAPI_BASE}${mediaAsset.formats.small.url} 500w`,
+        `${getFullUrl(mediaAsset.formats.small.url)} 500w`,
       mediaAsset.formats?.medium &&
-        `${STRAPI_BASE}${mediaAsset.formats.medium.url} 750w`,
+        `${getFullUrl(mediaAsset.formats.medium.url)} 750w`,
       mediaAsset.formats?.large &&
-        `${STRAPI_BASE}${mediaAsset.formats.large.url} 1000w`,
-      `${STRAPI_BASE}${mediaAsset.url} ${mediaAsset.width}w`,
+        `${getFullUrl(mediaAsset.formats.large.url)} 1000w`,
+      `${getFullUrl(mediaAsset.url)} ${mediaAsset.width}w`,
     ]
       .filter(Boolean)
       .join(", ");
     return `
       <img
-        src="${STRAPI_BASE}${mediaAsset.url}"
+        src="${getFullUrl(mediaAsset.url)}"
         srcset="${srcset}"
         sizes="(max-width: 768px) 100vw, (max-width: 1024px) 90vw, 80vw"
         alt="${mediaAsset.alternativeText || `Media asset`}" 

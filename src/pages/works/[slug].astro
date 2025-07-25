@@ -138,8 +138,11 @@ try {
     client = "Project Not Found";
   } else {
     const responseData = await res.json();
+    console.log('Full API response:', JSON.stringify(responseData, null, 2));
     const workData = responseData?.data?.[0];
+    console.log('Work data found:', workData);
     if (!workData) {
+      console.log('No work data found - data array is empty');
       project = null;
       client = "Project Not Found";
     } else {

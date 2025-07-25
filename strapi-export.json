@@ -1,0 +1,673 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "attributes": {
+        "Client": "Careem",
+        "Subtitle": "Envisioning the Future of Mobility",
+        "Year": "2024",
+        "Type": "App",
+        "Industry": null,
+        "Slug": "careem",
+        "Awards": null,
+        "Confidential": null,
+        "createdAt": "2025-07-23T21:47:23.098Z",
+        "updatedAt": "2025-07-25T09:46:18.738Z",
+        "publishedAt": "2025-07-23T22:47:00.000Z",
+        "ThumbImage": {
+          "data": {
+            "id": 1,
+            "attributes": {
+              "name": "careem - thumb.png",
+              "alternativeText": null,
+              "caption": null,
+              "width": 800,
+              "height": 480,
+              "formats": {
+                "thumbnail": {
+                  "name": "thumbnail_careem - thumb.png",
+                  "hash": "thumbnail_careem_thumb_2a81d94afc",
+                  "ext": ".png",
+                  "mime": "image/png",
+                  "path": null,
+                  "width": 245,
+                  "height": 147,
+                  "size": 75.38,
+                  "sizeInBytes": 75381,
+                  "url": "/uploads/thumbnail_careem_thumb_2a81d94afc.png"
+                },
+                "small": {
+                  "name": "small_careem - thumb.png",
+                  "hash": "small_careem_thumb_2a81d94afc",
+                  "ext": ".png",
+                  "mime": "image/png",
+                  "path": null,
+                  "width": 500,
+                  "height": 300,
+                  "size": 268.36,
+                  "sizeInBytes": 268355,
+                  "url": "/uploads/small_careem_thumb_2a81d94afc.png"
+                },
+                "medium": {
+                  "name": "medium_careem - thumb.png",
+                  "hash": "medium_careem_thumb_2a81d94afc",
+                  "ext": ".png",
+                  "mime": "image/png",
+                  "path": null,
+                  "width": 750,
+                  "height": 450,
+                  "size": 552.51,
+                  "sizeInBytes": 552508,
+                  "url": "/uploads/medium_careem_thumb_2a81d94afc.png"
+                }
+              },
+              "hash": "careem_thumb_2a81d94afc",
+              "ext": ".png",
+              "mime": "image/png",
+              "size": 148.18,
+              "url": "/uploads/careem_thumb_2a81d94afc.png",
+              "previewUrl": null,
+              "provider": "local",
+              "provider_metadata": null,
+              "createdAt": "2025-07-24T08:51:17.698Z",
+              "updatedAt": "2025-07-24T08:51:17.698Z"
+            }
+          }
+        },
+        "HeroMedia": {
+          "data": {
+            "id": 15,
+            "attributes": {
+              "name": "teaser-montage.m4v",
+              "alternativeText": null,
+              "caption": null,
+              "width": null,
+              "height": null,
+              "formats": null,
+              "hash": "teaser_montage_0c48684d97",
+              "ext": ".m4v",
+              "mime": "video/mp4",
+              "size": 44831.5,
+              "url": "/uploads/teaser_montage_0c48684d97.m4v",
+              "previewUrl": null,
+              "provider": "local",
+              "provider_metadata": null,
+              "createdAt": "2025-07-25T09:14:57.977Z",
+              "updatedAt": "2025-07-25T09:14:57.977Z"
+            }
+          }
+        },
+        "Agency": {
+          "data": {
+            "id": 1,
+            "attributes": {
+              "Name": "Fantasy Interactive",
+              "createdAt": "2025-07-23T21:40:48.334Z",
+              "updatedAt": "2025-07-24T08:54:07.292Z",
+              "publishedAt": "2025-07-24T08:54:07.291Z"
+            }
+          }
+        },
+        "ExternalLink": null,
+        "Credit": [
+          {
+            "id": 1,
+            "Position": "Group Experience Director",
+            "Name": "Jackie Black"
+          },
+          {
+            "id": 2,
+            "Position": "Research & Insights Director",
+            "Name": "Michelle Nelson"
+          },
+          {
+            "id": 3,
+            "Position": "Research & Insights Lead",
+            "Name": "Pedro Fernandes"
+          },
+          {
+            "id": 4,
+            "Position": "Research & Insights Lead",
+            "Name": "Amanda Chessa"
+          },
+          {
+            "id": 5,
+            "Position": "Research & Insights Coordinator",
+            "Name": "Ellen Lindsay"
+          },
+          {
+            "id": 6,
+            "Position": "Production Lead",
+            "Name": "Lisa Loukas"
+          },
+          {
+            "id": 7,
+            "Position": "UX Lead",
+            "Name": "Andoni Georgiou"
+          }
+        ],
+        "Sections": [
+          {
+            "id": 1,
+            "__component": "project.media"
+          },
+          {
+            "id": 1,
+            "__component": "project.content-section-phones",
+            "Body": "Ride User — Uses the app daily, often at speed. Prioritises convenience, reliability and short flows. Wants fewer taps and a clear path from request to destination.\n\nMiss Social — Coordinates rides, orders food for groups, sends payments. Needs visibility, flexibility and a sense of shared experience across services.\n\nThe Family — Books for others. Needs safety, simple rebooking, and clear information. Often time-poor and multi-tasking across family routines.\n\nMr Expat — New to the region. Looks for clarity and guidance. Needs a bit more context, some helpful nudges and a way to feel in control from day one."
+          },
+          {
+            "id": 2,
+            "__component": "project.media"
+          },
+          {
+            "id": 3,
+            "__component": "project.section",
+            "Title": "Home & Journeys",
+            "Body": [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "We redesigned the home experience to adapt to context. Instead of static tiles, users see what’s most relevant based on time, location and habits. In the morning, it might prompt a ride to work. In the evening, a food reorder or bill payment. Every screen moves the user toward a task, not just a category."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 1,
+            "__component": "project.vimeo",
+            "VimeoId": "1103716220"
+          }
+        ],
+        "Positions": {
+          "data": [
+            {
+              "id": 9,
+              "attributes": {
+                "Name": "UX Lead",
+                "createdAt": "2025-07-24T08:56:00.048Z",
+                "updatedAt": "2025-07-24T08:56:03.031Z",
+                "publishedAt": "2025-07-24T08:56:03.030Z"
+              }
+            },
+            {
+              "id": 10,
+              "attributes": {
+                "Name": "UI Lead",
+                "createdAt": "2025-07-24T08:56:18.837Z",
+                "updatedAt": "2025-07-24T08:56:20.214Z",
+                "publishedAt": "2025-07-24T08:56:20.213Z"
+              }
+            }
+          ]
+        },
+        "Services": {
+          "data": [
+            {
+              "id": 10,
+              "attributes": {
+                "Name": "Research",
+                "createdAt": "2025-07-24T21:18:24.688Z",
+                "updatedAt": "2025-07-24T21:18:34.450Z",
+                "publishedAt": "2025-07-24T21:19:40.601Z"
+              }
+            },
+            {
+              "id": 2,
+              "attributes": {
+                "Name": "Wireframing",
+                "createdAt": "2025-07-23T21:49:26.718Z",
+                "updatedAt": "2025-07-24T21:16:50.458Z",
+                "publishedAt": "2025-07-23T22:48:00.000Z"
+              }
+            },
+            {
+              "id": 9,
+              "attributes": {
+                "Name": "UX Design",
+                "createdAt": "2025-07-24T08:58:37.917Z",
+                "updatedAt": "2025-07-24T08:58:39.263Z",
+                "publishedAt": "2025-07-24T08:58:39.263Z"
+              }
+            },
+            {
+              "id": 8,
+              "attributes": {
+                "Name": "Visual Design",
+                "createdAt": "2025-07-24T08:58:11.003Z",
+                "updatedAt": "2025-07-24T08:58:12.821Z",
+                "publishedAt": "2025-07-24T08:58:12.821Z"
+              }
+            }
+          ]
+        },
+        "IntroSection": [
+          {
+            "id": 5,
+            "Title": "Overview",
+            "Body": [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "Careem asked us to reimagine their mobile app from the ground up. With over 27 services and millions of users across the Middle East, the experience had become bloated and difficult to navigate. We helped define a more focused direction, built around everyday needs instead of categories."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "Our goal was to create something smarter and more human. A unified system that connects services through purpose, not just proximity. The result is a super app that feels like a companion, not a catalogue."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "Title": "Approach",
+            "Body": [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "We spoke to customers, Captains and senior leadership, including Careem’s founders, to understand where the experience was breaking down."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "People weren’t navigating by service. They were trying to get somewhere, order food, send money or book help. We shaped the product around that behaviour, not around feature lists or service menus."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "The system had to scale. Some regions only offer rides. Others rely on ten or more services every day. We designed a flexible structure that adapts to context, while staying consistent, clear and responsive to intent."
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "Phone": null
+      }
+    },
+    {
+      "id": 2,
+      "attributes": {
+        "Client": "DAZN",
+        "Subtitle": "Digital sports streaming experience",
+        "Year": "2023",
+        "Type": "Digital Design",
+        "Industry": "Retail",
+        "Slug": "dazn",
+        "Awards": "SXSW Interactive Awards",
+        "Confidential": false,
+        "createdAt": "2025-07-23T21:49:37.160Z",
+        "updatedAt": "2025-07-24T10:28:36.003Z",
+        "publishedAt": "2025-07-23T22:48:00.000Z",
+        "ThumbImage": {
+          "data": {
+            "id": 3,
+            "attributes": {
+              "name": "dazn.png",
+              "alternativeText": null,
+              "caption": null,
+              "width": 480,
+              "height": 320,
+              "formats": {
+                "thumbnail": {
+                  "name": "thumbnail_dazn.png",
+                  "hash": "thumbnail_dazn_7ac2065a95",
+                  "ext": ".png",
+                  "mime": "image/png",
+                  "path": null,
+                  "width": 234,
+                  "height": 156,
+                  "size": 1.8,
+                  "sizeInBytes": 1804,
+                  "url": "/uploads/thumbnail_dazn_7ac2065a95.png"
+                }
+              },
+              "hash": "dazn_7ac2065a95",
+              "ext": ".png",
+              "mime": "image/png",
+              "size": 1.01,
+              "url": "/uploads/dazn_7ac2065a95.png",
+              "previewUrl": null,
+              "provider": "local",
+              "provider_metadata": null,
+              "createdAt": "2025-07-24T10:28:13.764Z",
+              "updatedAt": "2025-07-24T10:28:13.764Z"
+            }
+          }
+        },
+        "HeroMedia": {
+          "data": null
+        },
+        "Agency": {
+          "data": null
+        },
+        "ExternalLink": null,
+        "Credit": [],
+        "Sections": [],
+        "Positions": {
+          "data": []
+        },
+        "Services": {
+          "data": []
+        },
+        "IntroSection": [],
+        "Phone": null
+      }
+    },
+    {
+      "id": 3,
+      "attributes": {
+        "Client": "Forevermark",
+        "Subtitle": "Luxury jewelry brand campaign",
+        "Year": "2023",
+        "Type": "Brand Campaign",
+        "Industry": "Retail",
+        "Slug": "forevermark",
+        "Awards": "Cannes Lions 2023",
+        "Confidential": false,
+        "createdAt": "2025-07-23T21:49:43.292Z",
+        "updatedAt": "2025-07-24T10:29:04.090Z",
+        "publishedAt": "2025-07-23T22:48:00.000Z",
+        "ThumbImage": {
+          "data": {
+            "id": 4,
+            "attributes": {
+              "name": "forevermark.png",
+              "alternativeText": null,
+              "caption": null,
+              "width": 480,
+              "height": 320,
+              "formats": {
+                "thumbnail": {
+                  "name": "thumbnail_forevermark.png",
+                  "hash": "thumbnail_forevermark_40f4825fed",
+                  "ext": ".png",
+                  "mime": "image/png",
+                  "path": null,
+                  "width": 234,
+                  "height": 156,
+                  "size": 1.9,
+                  "sizeInBytes": 1901,
+                  "url": "/uploads/thumbnail_forevermark_40f4825fed.png"
+                }
+              },
+              "hash": "forevermark_40f4825fed",
+              "ext": ".png",
+              "mime": "image/png",
+              "size": 1.1,
+              "url": "/uploads/forevermark_40f4825fed.png",
+              "previewUrl": null,
+              "provider": "local",
+              "provider_metadata": null,
+              "createdAt": "2025-07-24T10:28:13.768Z",
+              "updatedAt": "2025-07-24T10:28:13.768Z"
+            }
+          }
+        },
+        "HeroMedia": {
+          "data": null
+        },
+        "Agency": {
+          "data": null
+        },
+        "ExternalLink": null,
+        "Credit": [],
+        "Sections": [],
+        "Positions": {
+          "data": []
+        },
+        "Services": {
+          "data": []
+        },
+        "IntroSection": [],
+        "Phone": null
+      }
+    },
+    {
+      "id": 4,
+      "attributes": {
+        "Client": "Trek",
+        "Subtitle": "Cycling brand digital experience",
+        "Year": "2022",
+        "Type": "Digital Design",
+        "Industry": "Retail",
+        "Slug": "trek",
+        "Awards": "Webby Awards",
+        "Confidential": false,
+        "createdAt": "2025-07-23T21:49:43.307Z",
+        "updatedAt": "2025-07-24T10:29:11.065Z",
+        "publishedAt": "2025-07-23T22:48:00.000Z",
+        "ThumbImage": {
+          "data": {
+            "id": 6,
+            "attributes": {
+              "name": "trek.png",
+              "alternativeText": null,
+              "caption": null,
+              "width": 480,
+              "height": 320,
+              "formats": {
+                "thumbnail": {
+                  "name": "thumbnail_trek.png",
+                  "hash": "thumbnail_trek_53740aa507",
+                  "ext": ".png",
+                  "mime": "image/png",
+                  "path": null,
+                  "width": 234,
+                  "height": 156,
+                  "size": 1.73,
+                  "sizeInBytes": 1729,
+                  "url": "/uploads/thumbnail_trek_53740aa507.png"
+                }
+              },
+              "hash": "trek_53740aa507",
+              "ext": ".png",
+              "mime": "image/png",
+              "size": 0.99,
+              "url": "/uploads/trek_53740aa507.png",
+              "previewUrl": null,
+              "provider": "local",
+              "provider_metadata": null,
+              "createdAt": "2025-07-24T10:28:13.771Z",
+              "updatedAt": "2025-07-24T10:28:13.771Z"
+            }
+          }
+        },
+        "HeroMedia": {
+          "data": null
+        },
+        "Agency": {
+          "data": null
+        },
+        "ExternalLink": null,
+        "Credit": [],
+        "Sections": [],
+        "Positions": {
+          "data": [
+            {
+              "id": 2,
+              "attributes": {
+                "Name": "Art Director",
+                "createdAt": "2025-07-23T21:49:20.071Z",
+                "updatedAt": "2025-07-24T08:54:35.177Z",
+                "publishedAt": "2025-07-23T22:48:00.000Z"
+              }
+            }
+          ]
+        },
+        "Services": {
+          "data": []
+        },
+        "IntroSection": [],
+        "Phone": null
+      }
+    },
+    {
+      "id": 5,
+      "attributes": {
+        "Client": "Valmont",
+        "Subtitle": "Luxury skincare brand identity",
+        "Year": "2022",
+        "Type": "Brand Identity",
+        "Industry": "Health",
+        "Slug": "valmont",
+        "Awards": "Pentawards 2022",
+        "Confidential": false,
+        "createdAt": "2025-07-23T21:49:48.993Z",
+        "updatedAt": "2025-07-24T10:29:20.162Z",
+        "publishedAt": "2025-07-23T22:48:00.000Z",
+        "ThumbImage": {
+          "data": {
+            "id": 5,
+            "attributes": {
+              "name": "valmont.png",
+              "alternativeText": null,
+              "caption": null,
+              "width": 480,
+              "height": 320,
+              "formats": {
+                "thumbnail": {
+                  "name": "thumbnail_valmont.png",
+                  "hash": "thumbnail_valmont_893f8308f5",
+                  "ext": ".png",
+                  "mime": "image/png",
+                  "path": null,
+                  "width": 234,
+                  "height": 156,
+                  "size": 1.86,
+                  "sizeInBytes": 1860,
+                  "url": "/uploads/thumbnail_valmont_893f8308f5.png"
+                }
+              },
+              "hash": "valmont_893f8308f5",
+              "ext": ".png",
+              "mime": "image/png",
+              "size": 1.06,
+              "url": "/uploads/valmont_893f8308f5.png",
+              "previewUrl": null,
+              "provider": "local",
+              "provider_metadata": null,
+              "createdAt": "2025-07-24T10:28:13.769Z",
+              "updatedAt": "2025-07-24T10:28:13.769Z"
+            }
+          }
+        },
+        "HeroMedia": {
+          "data": null
+        },
+        "Agency": {
+          "data": null
+        },
+        "ExternalLink": null,
+        "Credit": [],
+        "Sections": [],
+        "Positions": {
+          "data": []
+        },
+        "Services": {
+          "data": []
+        },
+        "IntroSection": [],
+        "Phone": null
+      }
+    },
+    {
+      "id": 6,
+      "attributes": {
+        "Client": "Wacoal",
+        "Subtitle": "Intimate apparel brand campaign",
+        "Year": "2021",
+        "Type": "Brand Campaign",
+        "Industry": "Retail",
+        "Slug": "wacoal",
+        "Awards": "D&AD Awards",
+        "Confidential": false,
+        "createdAt": "2025-07-23T21:49:49.009Z",
+        "updatedAt": "2025-07-24T10:29:29.463Z",
+        "publishedAt": "2025-07-23T22:48:00.000Z",
+        "ThumbImage": {
+          "data": {
+            "id": 7,
+            "attributes": {
+              "name": "wacoal.png",
+              "alternativeText": null,
+              "caption": null,
+              "width": 480,
+              "height": 320,
+              "formats": {
+                "thumbnail": {
+                  "name": "thumbnail_wacoal.png",
+                  "hash": "thumbnail_wacoal_91a56ab7ba",
+                  "ext": ".png",
+                  "mime": "image/png",
+                  "path": null,
+                  "width": 234,
+                  "height": 156,
+                  "size": 1.84,
+                  "sizeInBytes": 1844,
+                  "url": "/uploads/thumbnail_wacoal_91a56ab7ba.png"
+                }
+              },
+              "hash": "wacoal_91a56ab7ba",
+              "ext": ".png",
+              "mime": "image/png",
+              "size": 1.03,
+              "url": "/uploads/wacoal_91a56ab7ba.png",
+              "previewUrl": null,
+              "provider": "local",
+              "provider_metadata": null,
+              "createdAt": "2025-07-24T10:28:13.773Z",
+              "updatedAt": "2025-07-24T10:28:13.773Z"
+            }
+          }
+        },
+        "HeroMedia": {
+          "data": null
+        },
+        "Agency": {
+          "data": null
+        },
+        "ExternalLink": null,
+        "Credit": [],
+        "Sections": [],
+        "Positions": {
+          "data": []
+        },
+        "Services": {
+          "data": []
+        },
+        "IntroSection": [],
+        "Phone": null
+      }
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "pageSize": 25,
+      "pageCount": 1,
+      "total": 6
+    }
+  }
+}
