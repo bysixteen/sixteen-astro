@@ -6,7 +6,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['AtAero', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        		sans: ['AtAero', 'Inter', 'Helvetica Neue', 'Arial', 'sans-serif'],
         mono: ['Geist Mono', 'SF Mono', 'monospace'],
       },
       letterSpacing: {
