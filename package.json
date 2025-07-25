@@ -12,7 +12,7 @@
     "dev": "npx strapi develop",
     "dev:astro": "astro dev",
     "develop": "npx strapi develop",
-    "start": "./start.sh",
+    "start": "ls -la && echo 'Checking build directory...' && if [ ! -d 'dist' ]; then echo 'Building Strapi...' && NODE_OPTIONS='--max-old-space-size=4096' npx strapi build; fi && echo 'Starting Strapi...' && NODE_OPTIONS='--max-old-space-size=4096' npx strapi start",
     "postbuild": "echo 'Build completed successfully'",
     "strapi": "npx strapi",
     "upgrade": "npx @strapi/upgrade latest",
