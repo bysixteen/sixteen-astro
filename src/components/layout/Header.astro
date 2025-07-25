@@ -20,12 +20,9 @@ const navLinks: NavLink[] = providedNavLinks ?? [
   { label: 'CONTACT', href: '/contact' },
 ];
 
-// Fetch availability data from Strapi
-const AvailabilityRes = await fetch('http://localhost:1337/api/availability?populate=*');
-const AvailabilityData = await AvailabilityRes.json();
-console.log('AVAILABILITY DATA:', JSON.stringify(AvailabilityData, null, 2));
-const AvailabilityText = AvailabilityData.data?.attributes?.AvailabilityText;
-const AvailabilityEmail = AvailabilityData.data?.attributes?.AvailabilityEmail;
+// Static availability data for Astro-only project
+const AvailabilityText = "From August 18th";
+const AvailabilityEmail = "daniel@bysixteen.co.uk";
 ---
 <header class="nav__header dark">
   <div class="grid grid-cols-12 items-start w-full py-4 md:py-5">

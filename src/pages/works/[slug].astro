@@ -121,13 +121,19 @@ try {
   }
 
   const apiUrl = `${API}/works?${query}`;
+  console.log('API URL:', apiUrl);
+  
   const res = await fetch(apiUrl, {
     headers: {
       'Accept': 'application/json',
     },
   });
 
+  console.log('Response status:', res.status);
+  console.log('Response ok:', res.ok);
+
   if (!res.ok) {
+    console.log('API request failed with status:', res.status);
     project = null;
     client = "Project Not Found";
   } else {
@@ -168,6 +174,7 @@ try {
     }
   }
 } catch (error) {
+  console.log('API error:', error);
   project = null;
   client = "Project Not Found";
 }
@@ -190,12 +197,7 @@ try {
           </div>
           <div>
             <span class="block text-xs sm:text-sm font-mono brand-typography text-ink-text-secondary mb-2">ROLE</span>
-            <span class="block text-base font-normal text-ink-text-cream">
-              {project?.Positions && project.Positions.length > 0 
-                ? project.Positions.map((position: any) => position.Name).join(', ')
-                : '—'
-              }
-            </span>
+            <span class="block text-base font-normal text-ink-text-cream">{project?.Positions?.[0]?.Name || project?.Industry || '—'}</span>
           </div>
           <div>
             <span class="block text-xs sm:text-sm font-mono brand-typography text-ink-text-secondary mb-2">COMPLETED</span>

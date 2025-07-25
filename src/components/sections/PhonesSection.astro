@@ -1,5 +1,5 @@
 ---
-import { renderMedia, renderRichText } from '../../astro-utils/mediaUtils';
+import { renderMedia, renderRichText } from '../../utils/mediaUtils';
 
 interface Props {
   section: any;
@@ -12,7 +12,7 @@ const { section } = Astro.props;
   <div class="grid grid-cols-12 gap-6 px-grid">
     {/* Text content on the left */}
     <div class="col-start-1 col-end-4">
-      <div id="phones-text">
+      <div id="phones-text" class="phones-text">
         {section.Body && (
           <div class="text-lg leading-relaxed text-ink-text-cream" data-animate="fade-up" set:html={renderRichText(section.Body)} />
         )}
@@ -23,20 +23,25 @@ const { section } = Astro.props;
     <div class="col-start-6 col-span-7">
       {(() => {
         let mediaAssets = section.MediaAsset;
+        
+        // Handle different data structures
         if (mediaAssets?.data) {
           mediaAssets = Array.isArray(mediaAssets.data) ? mediaAssets.data : [mediaAssets.data];
         } else if (mediaAssets && !Array.isArray(mediaAssets)) {
           mediaAssets = [mediaAssets];
         }
+        
         if (mediaAssets && Array.isArray(mediaAssets) && mediaAssets.length > 0) {
           return (
             <div class="grid grid-cols-12 gap-6">
+              {/* First column - starts at column 7 */}
               <div class="col-start-1 col-span-6">
                 {mediaAssets.filter((_, index) => index % 2 === 0).map((asset: any, index: number) => {
                   let mediaAsset = asset;
                   if (asset?.attributes) mediaAsset = asset.attributes;
                   else if (asset?.data?.attributes) mediaAsset = asset.data.attributes;
                   else if (asset?.data) mediaAsset = asset.data;
+                  
                   if (mediaAsset && mediaAsset.url) {
                     return (
                       <div class="w-full lg:w-[320px] rounded-[20px] overflow-hidden mb-60">
@@ -48,12 +53,15 @@ const { section } = Astro.props;
                   }
                 })}
               </div>
+              
+              {/* Second column - aligned to the right, offset 256px from top */}
               <div class="col-start-7 col-span-6 pt-64 flex flex-col items-end">
                 {mediaAssets.filter((_, index) => index % 2 === 1).map((asset: any, index: number) => {
                   let mediaAsset = asset;
                   if (asset?.attributes) mediaAsset = asset.attributes;
                   else if (asset?.data?.attributes) mediaAsset = asset.data.attributes;
                   else if (asset?.data) mediaAsset = asset.data;
+                  
                   if (mediaAsset && mediaAsset.url) {
                     return (
                       <div class="w-full lg:w-[320px] rounded-[20px] overflow-hidden mb-60">
@@ -73,4 +81,60 @@ const { section } = Astro.props;
       })()}
     </div>
   </div>
-</section> 
+</section>
+
+<script>
+  import { gsap } from "gsap";
+  import { ScrollTrigger } from "gsap/ScrollTrigger";
+  
+  gsap.registerPlugin(ScrollTrigger);
+  
+  // Sticky text effect for phones section using GSAP ScrollTrigger
+  function initStickyPhonesText() {
+    const phonesSection = document.getElementById('phones-section');
+    const phonesText = document.getElementById('phones-text');
+    
+    if (!phonesSection || !phonesText) return;
+    
+    // Create ScrollTrigger for sticky text effect
+    ScrollTrigger.create({
+      trigger: phonesSection,
+      start: "top top+=120", // Start when section top hits 120px from viewport top
+      end: "bottom bottom", // End when section bottom hits viewport bottom
+      pin: phonesText, // Pin the text element
+      pinSpacing: false, // Don't add spacing when pinned
+      onEnter: () => {
+        // Add padding when pinning starts
+        phonesText.classList.add('pt-10');
+      },
+      onLeave: () => {
+        // Remove padding when pinning ends
+        phonesText.classList.remove('pt-10');
+      },
+      onEnterBack: () => {
+        // Add padding when scrolling back up and pinning starts again
+        phonesText.classList.add('pt-10');
+      },
+      onLeaveBack: () => {
+        // Remove padding when scrolling back up and pinning ends
+        phonesText.classList.remove('pt-10');
+      },
+      onUpdate: (self) => {
+        // Optional: Add custom logic here if needed
+        console.log('ScrollTrigger progress:', self.progress);
+      }
+    });
+    
+    // Cleanup function
+    return () => {
+      ScrollTrigger.getAll().forEach(trigger => {
+        if (trigger.vars.trigger === phonesSection) {
+          trigger.kill();
+        }
+      });
+    };
+  }
+  
+  // Initialize when DOM is ready
+  document.addEventListener('DOMContentLoaded', initStickyPhonesText);
+</script> 

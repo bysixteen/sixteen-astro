@@ -1,8 +1,7 @@
 ---
 let works = [];
 try {
-  //const worksRes = await fetch(`http://localhost:1337/api/works?populate=*`);
-  const worksRes = await fetch(`https://your-strapi-render-url.onrender.com/api/works?populate=*`);
+  const worksRes = await fetch(`http://localhost:1337/api/works?populate=*`);
   if (worksRes.ok) {
     const response = await worksRes.json();
     works = response.data || [];
@@ -59,7 +58,12 @@ import '../styles/main.css';
           
         </div>
         
-
+        {/* Debug info - remove this later */}
+        <div style="position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; z-index: 1000; font-family: monospace; font-size: 12px;">
+          <div>Works loaded: {works?.length || 0}</div>
+          <div>Canvas: <span id="canvas-status">Checking...</span></div>
+          <div>Gallery: <span id="gallery-status">Not started</span></div>
+        </div>
       </main>
     </div>
   </div>
