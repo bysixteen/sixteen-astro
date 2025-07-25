@@ -10,10 +10,12 @@ const STRAPI_URL = import.meta.env.PUBLIC_STRAPI_URL;
 // Fetch proposition from Strapi
 let Proposition = "Creating meaningful digital experiences that connect brands with their audiences."; // fallback
 try {
-  const propRes = await fetch(STRAPI_URL + '/proposition?populate=*');
-  if (propRes.ok) {
-    const { data: propData } = await propRes.json();
-    Proposition = propData?.attributes?.Body ?? propData?.Body ?? Proposition;
+  if (STRAPI_URL) {
+    const propRes = await fetch(STRAPI_URL + '/proposition?populate=*');
+    if (propRes.ok) {
+      const { data: propData } = await propRes.json();
+      Proposition = propData?.attributes?.Body ?? propData?.Body ?? Proposition;
+    }
   }
 } catch (error) {
   console.log('Failed to fetch proposition from Strapi:', error);

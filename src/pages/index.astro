@@ -24,7 +24,7 @@ import '../styles/main.css';
     // Global flag to track when data is ready
     (window as any).projectDataReady = false;
   </script>
-  <script type="module" src="/src/scripts/gallery-full.js"></script>
+  <script type="module" src="/scripts/gallery.js"></script>
   <script>
     // Debug script loading
     console.log('Gallery script tag added to DOM');
@@ -51,6 +51,10 @@ import '../styles/main.css';
         }
         
         console.log('Fetching from Strapi URL:', STRAPI_URL);
+        
+        if (!STRAPI_URL) {
+          throw new Error('Strapi URL is not configured');
+        }
         
         // Fetch from Strapi
         const worksRes = await fetch(STRAPI_URL + '/works?populate=*');
@@ -111,16 +115,66 @@ import '../styles/main.css';
             dataStatusElement.textContent = `Loaded ${works.length} projects`;
           }
           
-          // Set global flag and dispatch custom event
-          (window as any).projectDataReady = true;
-          window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: works.length } }));
-        }
-      } catch (error) {
-        console.error('Error loading works:', error);
-        const dataStatusElement = document.getElementById('data-status');
+                  // Set global flag and dispatch custom event
+        (window as any).projectDataReady = true;
+        window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: works.length } }));
+      }
+    } catch (error) {
+      console.error('Error loading works:', error);
+      const dataStatusElement = document.getElementById('data-status');
+      if (dataStatusElement) {
+        dataStatusElement.textContent = 'Error loading data';
+      }
+      
+      // Fallback to sample data if Strapi is unavailable
+      const projectData = document.getElementById('project-data');
+      if (projectData) {
+        const fallbackWorks = [
+          {
+            Client: 'Careem',
+            Type: 'App',
+            Slug: 'careem',
+            ThumbImage: { data: { attributes: { url: '/careem-thumb.png' } } }
+          },
+          {
+            Client: 'DAZN',
+            Type: 'Digital Design',
+            Slug: 'dazn',
+            ThumbImage: { data: { attributes: { url: '/video-placeholder.png' } } }
+          },
+          {
+            Client: 'Forevermark',
+            Type: 'Brand Campaign',
+            Slug: 'forevermark',
+            ThumbImage: { data: { attributes: { url: '/video-placeholder.png' } } }
+          }
+        ];
+        
+        projectData.innerHTML = fallbackWorks.map((item: any) => {
+          const client = item.Client;
+          const slug = item.Slug;
+          const imgUrl = item.ThumbImage?.data?.attributes?.url || '/video-placeholder.png';
+          
+          return `<div 
+            class="project-item"
+            data-title="${client}"
+            data-category="${item.Type ?? '—'}"
+            data-image="${imgUrl}"
+            data-url="/works/${slug}"
+            style="display: none;"
+          >
+            ${client} - ${item.Type ?? '—'}
+          </div>`;
+        }).join('');
+        
         if (dataStatusElement) {
-          dataStatusElement.textContent = 'Error loading data';
+          dataStatusElement.textContent = `Loaded ${fallbackWorks.length} sample projects`;
         }
+        
+        // Set global flag and dispatch custom event
+        (window as any).projectDataReady = true;
+        window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: fallbackWorks.length } }));
+      }
         
         // Set global flag even on error to prevent hanging
         (window as any).projectDataReady = true;

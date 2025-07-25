@@ -1,0 +1,8 @@
+{
+  "env": {
+    "PUBLIC_STRAPI_URL": "https://supportive-baseball-03e494ce0b.strapiapp.com/api"
+  },
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "astro"
+} 
