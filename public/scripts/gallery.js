@@ -36,8 +36,6 @@ let hoveredProjectMesh = null;
 
 // Hover label elements
 let hoverLabelContainer, hoverLabelTitle, hoverLabelCategory;
-let titleTextSplit = null;
-let categoryTextSplit = null;
 let hoverAnimationTimeline = null;
 let hoverExitAnimation = null;
 
@@ -117,17 +115,38 @@ function createHoverTitle() {
 	hoverLabelContainer = document.createElement("div");
 	hoverLabelContainer.className = "project-hover-label";
 	hoverLabelContainer.style.display = "flex";
-	hoverLabelContainer.style.flexDirection = "column";
-	hoverLabelContainer.style.gap = "4px";
+	hoverLabelContainer.style.flexDirection = "row";
+	hoverLabelContainer.style.justifyContent = "space-between";
+	hoverLabelContainer.style.alignItems = "flex-start";
+	hoverLabelContainer.style.gap = "24px";
+	hoverLabelContainer.style.minWidth = "200px";
+
+	// Create title container with masked animation structure
+	const titleContainer = document.createElement("div");
+	titleContainer.className = "u--clip u--rel";
+	titleContainer.style.height = "1em";
+	titleContainer.style.overflow = "hidden";
+	titleContainer.style.lineHeight = "1";
 
 	hoverLabelTitle = document.createElement("span");
 	hoverLabelTitle.className = "project-hover-label__title";
 
+	titleContainer.appendChild(hoverLabelTitle);
+
+	// Create category container with masked animation structure
+	const categoryContainer = document.createElement("div");
+	categoryContainer.className = "u--clip u--rel";
+	categoryContainer.style.height = "1em";
+	categoryContainer.style.overflow = "hidden";
+	categoryContainer.style.lineHeight = "1";
+
 	hoverLabelCategory = document.createElement("span");
 	hoverLabelCategory.className = "project-hover-label__category";
 
-	hoverLabelContainer.appendChild(hoverLabelTitle);
-	hoverLabelContainer.appendChild(hoverLabelCategory);
+	categoryContainer.appendChild(hoverLabelCategory);
+
+	hoverLabelContainer.appendChild(titleContainer);
+	hoverLabelContainer.appendChild(categoryContainer);
 	document.body.appendChild(hoverLabelContainer);
 
   // Performance: quickSetter for GPU-accelerated moves
@@ -315,12 +334,13 @@ const CONFIG = {
 
 // ---------------------------------------------------------------------------
 // TEXT_ANIM – shared timing constants for SplitText letter in/out animations
+// Matches navigation link animations exactly
 // ---------------------------------------------------------------------------
 const TEXT_ANIM = {
-  inDuration: 0.6, // Animation duration for text appearing (in seconds). Higher = slower.
-  outDuration: 0.4, // Animation duration for text disappearing (in seconds). Higher = slower.
-  charStagger: 0.01, // Delay between each letter animating. Higher = more of a 'cascade' effect.
-  categoryStagger: 0.005, // Stagger for the category text, can be different for effect.
+  inDuration: 0.735, // Animation duration for text appearing (matches nav links)
+  outDuration: 0.735, // Animation duration for text disappearing (matches nav links)
+  charStagger: 0.00666667, // Delay between each letter animating (matches nav links)
+  categoryStagger: 0.00666667, // Stagger for the category text (matches nav links)
 };
 
 // Border overlay removed - unnecessary decoration
@@ -1167,93 +1187,80 @@ function updateHoverStates() {
         hoverAnimationTimeline = null;
       }
 
-      // SplitText animation with forced DOM update and micro-delay
-      if (typeof SplitText !== "undefined") {
-        // AGGRESSIVE CLEANUP: Kill everything immediately for clean state
-				if (titleTextSplit) {
-					titleTextSplit.revert();
-					titleTextSplit = null;
+      // Masked animation (same as navigation) - create character-by-character effect
+      if (hoverLabelTitle && hoverLabelCategory) {
+        // Clean up any existing animations
+        if (hoverAnimationTimeline) {
+          hoverAnimationTimeline.kill();
+          hoverAnimationTimeline = null;
         }
-				if (categoryTextSplit) {
-					categoryTextSplit.revert();
-					categoryTextSplit = null;
-        }
-
-        // Ensure clean text state before split
-				if (hoverLabelTitle) hoverLabelTitle.style.opacity = "1";
-				if (hoverLabelCategory) hoverLabelCategory.style.opacity = "1";
-
-        // Validate text content before creating splits
-        const expectedTitle = data.title || "";
-        const expectedCategory = data.category || "";
-				const actualTitle = hoverLabelTitle.textContent;
-				const actualCategory = hoverLabelCategory.textContent;
-
-        // Force text update if mismatch detected
-        if (actualTitle !== expectedTitle) {
-					hoverLabelTitle.textContent = expectedTitle;
-        }
-        if (actualCategory !== expectedCategory) {
-					hoverLabelCategory.textContent = expectedCategory;
+        if (hoverExitAnimation) {
+          hoverExitAnimation.kill();
+          hoverExitAnimation = null;
         }
 
-				titleTextSplit = new SplitText(hoverLabelTitle, {
-					type: "chars",
-				});
-				categoryTextSplit = new SplitText(hoverLabelCategory, {
-					type: "chars",
-				});
+        // Create character-by-character animation (same as navigation)
+        const titleText = hoverLabelTitle.textContent;
+        const categoryText = hoverLabelCategory.textContent;
+        
+        // Split title text into characters
+        const titleChars = titleText.split('').map(char => {
+          const span = document.createElement('span');
+          span.textContent = char;
+          span.style.display = 'inline-block';
+          span.style.position = 'relative';
+          // Preserve spaces by ensuring they have proper width
+          if (char === ' ') {
+            span.style.whiteSpace = 'pre';
+            span.style.width = '0.2em';
+          }
+          return span;
+        });
+        
+        // Split category text into characters
+        const categoryChars = categoryText.split('').map(char => {
+          const span = document.createElement('span');
+          span.textContent = char;
+          span.style.display = 'inline-block';
+          span.style.position = 'relative';
+          // Preserve spaces by ensuring they have proper width
+          if (char === ' ') {
+            span.style.whiteSpace = 'pre';
+            span.style.width = '0.2em';
+          }
+          return span;
+        });
+        
+        // Clear and populate the elements
+        hoverLabelTitle.textContent = '';
+        hoverLabelCategory.textContent = '';
+        titleChars.forEach(char => hoverLabelTitle.appendChild(char));
+        categoryChars.forEach(char => hoverLabelCategory.appendChild(char));
 
-				hoverAnimationTimeline = gsap.timeline();
-				hoverAnimationTimeline
-					.from(titleTextSplit.chars, {
-            yPercent: -125,
-            opacity: 0,
+        // Set initial state (characters moved up, invisible due to clip container)
+        gsap.set([...titleChars, ...categoryChars], {
+          y: '-1.25em',
+        });
+
+        // Create timeline for masked animation (text animates up into view)
+        hoverAnimationTimeline = gsap.timeline();
+        hoverAnimationTimeline
+          .to(titleChars, {
+            y: '0em',
             duration: TEXT_ANIM.inDuration,
-            ease: "power2.out",
+            ease: 'customEase',
             stagger: TEXT_ANIM.charStagger,
           })
-          .from(
-						categoryTextSplit.chars,
-            {
-              yPercent: -125,
-              opacity: 0,
-              duration: TEXT_ANIM.inDuration,
-              ease: "power2.out",
-              stagger: TEXT_ANIM.categoryStagger,
-            },
-            "<0.01",
-					); // start 0.01 s after the title tween's START
-      } else {
-        // Fallback animation without SplitText - create character-by-character effect
-        if (hoverLabelTitle && hoverLabelCategory) {
-          // Set initial state
-          hoverLabelTitle.style.opacity = "0";
-          hoverLabelCategory.style.opacity = "0";
-          hoverLabelTitle.style.transform = "translateY(-20px)";
-          hoverLabelCategory.style.transform = "translateY(-20px)";
-
-          // Create timeline for fallback animation
-          hoverAnimationTimeline = gsap.timeline();
-          hoverAnimationTimeline
-            .to(hoverLabelTitle, {
-              opacity: 1,
-              y: 0,
-              duration: TEXT_ANIM.inDuration,
-              ease: "power2.out",
-            })
-            .to(hoverLabelCategory, {
-              opacity: 1,
-              y: 0,
-              duration: TEXT_ANIM.inDuration,
-              ease: "power2.out",
-            }, "<0.05"); // Slight stagger
-        }
+          .to(categoryChars, {
+            y: '0em',
+            duration: TEXT_ANIM.inDuration,
+            ease: 'customEase',
+            stagger: TEXT_ANIM.charStagger,
+          }, "<0.01"); // start 0.01 s after the title tween's START
       }
     }
 
 		hoverLabelContainer.style.visibility = "visible";
-		hoverLabelContainer.style.opacity = "1";
     document.body.style.cursor = "pointer";
 
 		// Add card-hover class to canvas for proper cursor
@@ -1267,51 +1274,30 @@ function updateHoverStates() {
 
 		if (hoverExitAnimation) {
       // already animating out; ignore
-    } else if (
-      typeof SplitText !== "undefined" &&
-			(titleTextSplit || categoryTextSplit)
-    ) {
-      // Animate out SplitText characters
-			const tSplit = titleTextSplit;
-			const cSplit = categoryTextSplit;
+    } else if (typeof gsap !== "undefined" && hoverLabelTitle && hoverLabelCategory) {
+      // Get all character spans for masked exit animation
+      const titleChars = Array.from(hoverLabelTitle.children);
+      const categoryChars = Array.from(hoverLabelCategory.children);
+      const allChars = [...titleChars, ...categoryChars];
 
-      // Immediately null out globals to prevent conflicts
-			titleTextSplit = null;
-			categoryTextSplit = null;
-
-      if (tSplit || cSplit) {
-        const allChars = [
-          ...(tSplit ? tSplit.chars : []),
-          ...(cSplit ? cSplit.chars : []),
-        ];
-
-				hoverExitAnimation = gsap.to(allChars, {
-          yPercent: -125,
-          opacity: 0,
+      if (allChars.length > 0) {
+        // Animate out using masked animation (text animates up out of view)
+        hoverExitAnimation = gsap.to(allChars, {
+          y: "-1.25em",
           duration: TEXT_ANIM.outDuration,
-          ease: "power2.in",
+          ease: "customEase",
           stagger: TEXT_ANIM.charStagger,
           onComplete: () => {
-						hoverExitAnimation = null;
-            if (tSplit) tSplit.revert();
-            if (cSplit) cSplit.revert();
-						if (hoverLabelContainer) hoverLabelContainer.style.visibility = "hidden";
+            hoverExitAnimation = null;
+            if (hoverLabelContainer) hoverLabelContainer.style.visibility = "hidden";
           },
         });
+      } else {
+        // Fallback if no characters found
+        if (hoverLabelContainer) hoverLabelContainer.style.visibility = "hidden";
       }
-    } else if (typeof gsap !== "undefined") {
-      // Fallback simple fade out
-			hoverExitAnimation = gsap.to([hoverLabelTitle, hoverLabelCategory], {
-        opacity: 0,
-        duration: 0.15,
-        ease: "power2.in",
-        onComplete: () => {
-					hoverExitAnimation = null;
-					if (hoverLabelContainer) hoverLabelContainer.style.visibility = "hidden";
-        },
-      });
-		} else if (!hoverExitAnimation && hoverLabelContainer) {
-			hoverLabelContainer.style.visibility = "hidden";
+    } else if (!hoverExitAnimation && hoverLabelContainer) {
+      hoverLabelContainer.style.visibility = "hidden";
     }
 
     document.body.style.cursor = "default";
@@ -1693,10 +1679,14 @@ function updateHoverLabelPositionOptimized() {
 			hoverLabelContainer._justActivated = true;
 		}
 
-		// Use floating-point precision for transform
+		// Position the label to span the full width of the card
+		// Left edge of title aligns with left edge of card
+		// Right edge of category aligns with right edge of card
+		const labelWidth = brX - blX;
 		const transform = `translate3d(${blX.toFixed(3)}px, ${(blY + offset).toFixed(3)}px, 0)`;
 		if (transform !== lastHoverLabelTransform) {
 			hoverLabelContainer.style.transform = transform;
+			hoverLabelContainer.style.width = `${labelWidth}px`;
 			lastHoverLabelTransform = transform;
 		}
 	} else {
