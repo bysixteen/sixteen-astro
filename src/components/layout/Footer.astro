@@ -17,9 +17,9 @@ try {
       Proposition = propData?.attributes?.Body ?? propData?.Body ?? Proposition;
     }
   }
-} catch (error) {
-  console.log('Failed to fetch proposition from Strapi:', error);
-}
+    } catch (error) {
+      // Handle error silently
+    }
 
 
 // Get today's date in DD.MM.YY format

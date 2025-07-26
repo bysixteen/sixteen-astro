@@ -10,55 +10,22 @@ import '../styles/main.css';
         <div id="project-data" style="display:none;">
           <!-- Project data will be populated by JavaScript -->
         </div>
-        
-        <div style="position: fixed; top: 10px; left: 10px; background: black; color: white; padding: 10px; z-index: 1000; font-family: monospace; font-size: 12px;">
-          <div>Works loaded: <span id="works-count">0</span></div>
-          <div>Canvas: <span id="canvas-status">Checking...</span></div>
-          <div>Gallery: <span id="gallery-status">Not started</span></div>
-          <div>Data Status: <span id="data-status">Loading...</span></div>
-        </div>
       </main>
     </div>
   </div>
-  <script>
-    // Global flag to track when data is ready
-    (window as any).projectDataReady = false;
-  </script>
-  <script type="module" src="/scripts/gallery.js"></script>
-  <script>
-    // Debug script loading
-    console.log('Gallery script tag added to DOM');
-    
-    // Check if script loads
-    window.addEventListener('load', () => {
-      console.log('Page loaded, checking gallery script...');
-      if ((window as any).startGallery) {
-        console.log('Gallery script loaded successfully');
-      } else {
-        console.error('Gallery script not loaded!');
-      }
-    });
-  </script>
+  <script src="/scripts/gallery.js" is:inline></script>
   <script>
     // Strapi configuration
     const STRAPI_URL = import.meta.env.PUBLIC_STRAPI_URL;
     
     async function loadWorks() {
       try {
-        const dataStatusElement = document.getElementById('data-status');
-        if (dataStatusElement) {
-          dataStatusElement.textContent = 'Fetching from Strapi...';
-        }
-        
-        console.log('Fetching from Strapi URL:', STRAPI_URL);
-        
         if (!STRAPI_URL) {
           throw new Error('Strapi URL is not configured');
         }
         
         // Fetch from Strapi
         const worksRes = await fetch(STRAPI_URL + '/works?populate=*');
-        console.log('Strapi response status:', worksRes.status);
         
         if (!worksRes.ok) {
           throw new Error(`Failed to fetch from Strapi: ${worksRes.status} ${worksRes.statusText}`);
@@ -66,14 +33,6 @@ import '../styles/main.css';
         
         const response = await worksRes.json();
         const works = response.data || [];
-        console.log('Successfully fetched from Strapi:', works.length, 'works');
-        console.log('Raw Strapi data:', JSON.stringify(works[0], null, 2));
-        
-        // Update works count
-        const worksCountElement = document.getElementById('works-count');
-        if (worksCountElement) {
-          worksCountElement.textContent = works.length.toString();
-        }
         
         // Populate project data
         const projectData = document.getElementById('project-data');
@@ -82,9 +41,7 @@ import '../styles/main.css';
             const a = item.attributes ?? item;
             const client = a.Client;
             const slug = a.Slug;
-            // Use the actual image URL from Strapi with proper base URL
             let imgUrl = "/video-placeholder.png"; // fallback
-            console.log('Processing project:', a.Client, 'ThumbImage:', a.ThumbImage);
             if (a.ThumbImage?.data?.attributes?.url) {
               // If it's a relative URL, prepend the Strapi base URL
               if (a.ThumbImage.data.attributes.url.startsWith('/')) {
@@ -93,9 +50,6 @@ import '../styles/main.css';
               } else {
                 imgUrl = a.ThumbImage.data.attributes.url;
               }
-              console.log('Constructed image URL for', a.Client, ':', imgUrl);
-            } else {
-              console.log('No ThumbImage found for', a.Client, ', using fallback');
             }
             
             return `<div 
@@ -110,81 +64,64 @@ import '../styles/main.css';
             </div>`;
           }).join('');
           
-          // Update data status
-          if (dataStatusElement) {
-            dataStatusElement.textContent = `Loaded ${works.length} projects`;
-          }
-          
-                  // Set global flag and dispatch custom event
-        (window as any).projectDataReady = true;
-        window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: works.length } }));
-      }
-    } catch (error) {
-      console.error('Error loading works:', error);
-      const dataStatusElement = document.getElementById('data-status');
-      if (dataStatusElement) {
-        dataStatusElement.textContent = 'Error loading data';
-      }
-      
-      // Fallback to sample data if Strapi is unavailable
-      const projectData = document.getElementById('project-data');
-      if (projectData) {
-        const fallbackWorks = [
-          {
-            Client: 'Careem',
-            Type: 'App',
-            Slug: 'careem',
-            ThumbImage: { data: { attributes: { url: '/careem-thumb.png' } } }
-          },
-          {
-            Client: 'DAZN',
-            Type: 'Digital Design',
-            Slug: 'dazn',
-            ThumbImage: { data: { attributes: { url: '/video-placeholder.png' } } }
-          },
-          {
-            Client: 'Forevermark',
-            Type: 'Brand Campaign',
-            Slug: 'forevermark',
-            ThumbImage: { data: { attributes: { url: '/video-placeholder.png' } } }
-          }
-        ];
-        
-        projectData.innerHTML = fallbackWorks.map((item: any) => {
-          const client = item.Client;
-          const slug = item.Slug;
-          const imgUrl = item.ThumbImage?.data?.attributes?.url || '/video-placeholder.png';
-          
-          return `<div 
-            class="project-item"
-            data-title="${client}"
-            data-category="${item.Type ?? '—'}"
-            data-image="${imgUrl}"
-            data-url="/works/${slug}"
-            style="display: none;"
-          >
-            ${client} - ${item.Type ?? '—'}
-          </div>`;
-        }).join('');
-        
-        if (dataStatusElement) {
-          dataStatusElement.textContent = `Loaded ${fallbackWorks.length} sample projects`;
+          // Set global flag and dispatch custom event
+          window.projectDataReady = true;
+          window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: works.length } }));
         }
-        
-        // Set global flag and dispatch custom event
-        (window as any).projectDataReady = true;
-        window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: fallbackWorks.length } }));
-      }
-        
-        // Set global flag even on error to prevent hanging
-        (window as any).projectDataReady = true;
-        window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: 0 } }));
+      } catch (error) {
+        // Fallback to sample data if Strapi is unavailable
+        const projectData = document.getElementById('project-data');
+        if (projectData) {
+          const fallbackWorks = [
+            {
+              Client: 'Careem',
+              Type: 'App',
+              Slug: 'careem',
+              ThumbImage: { data: { attributes: { url: '/careem-thumb.png' } } }
+            },
+            {
+              Client: 'DAZN',
+              Type: 'Digital Design',
+              Slug: 'dazn',
+              ThumbImage: { data: { attributes: { url: '/video-placeholder.png' } } }
+            },
+            {
+              Client: 'Forevermark',
+              Type: 'Brand Campaign',
+              Slug: 'forevermark',
+              ThumbImage: { data: { attributes: { url: '/video-placeholder.png' } } }
+            }
+          ];
+          
+          projectData.innerHTML = fallbackWorks.map((item: any) => {
+            const client = item.Client;
+            const slug = item.Slug;
+            const imgUrl = item.ThumbImage?.data?.attributes?.url || '/video-placeholder.png';
+            
+            return `<div 
+              class="project-item"
+              data-title="${client}"
+              data-category="${item.Type ?? '—'}"
+              data-image="${imgUrl}"
+              data-url="/works/${slug}"
+              style="display: none;"
+            >
+              ${client} - ${item.Type ?? '—'}
+            </div>`;
+          }).join('');
+          
+          // Set global flag and dispatch custom event
+          window.projectDataReady = true;
+          window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: fallbackWorks.length } }));
+        } else {
+          // Set global flag even on error to prevent hanging
+          window.projectDataReady = true;
+          window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: 0 } }));
+        }
       }
     }
     
     // Load works when page loads
-    loadWorks().then(() => {
-      console.log('Works loaded, triggering gallery initialization');
-    });
+    loadWorks();
   </script>
 </Layout> 

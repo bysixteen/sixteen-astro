@@ -24,8 +24,23 @@ const bottomHidden = "M 0 100 V 100 Q 50 100 100 100 V 100 Z"; // hidden at very
 const bottomWaveUp = "M 0 100 V 50 Q 50 0 100 50 V 100 Z";    // wave pulled up from bottom edge
 const coveredFromBottom = "M 0 100 V 0 Q 50 0 100 0 V 100 Z"; // fully covered, drawn from bottom for a smooth morph
 
+// Wait for GSAP to be available
+function waitForGSAP() {
+  return new Promise((resolve) => {
+    const checkGSAP = () => {
+      if (typeof gsap !== 'undefined') {
+        resolve();
+      } else {
+        setTimeout(checkGSAP, 100);
+      }
+    };
+    checkGSAP();
+  });
+}
+
 // Show loader and set to full coverage (page starts covered)
-function showLoader() {
+async function showLoader() {
+  await waitForGSAP();
   loader.classList.remove("hidden");
   gsap.set(path, { attr: { d: covered } });
   gsap.set(path2, { attr: { d: covered } });
@@ -35,7 +50,8 @@ function showLoader() {
 
 // 🔹 INTERNAL LINK OUT ANIMATION (when clicking to leave current page)
 // This function is called when user clicks an internal link
-function loaderIn(onComplete) {
+async function loaderIn(onComplete) {
+  await waitForGSAP();
   loader.classList.remove("hidden");
   loader.style.opacity = "1";
   loader.style.pointerEvents = "all";
@@ -70,7 +86,8 @@ function loaderIn(onComplete) {
 
 // 🔹 INTERNAL LINK IN ANIMATION (when arriving at new page)
 // This function is called on new page load to reveal content
-function loaderOut(onComplete) {
+async function loaderOut(onComplete) {
+  await waitForGSAP();
   // Ensure main content starts hidden
   const mainContent = document.getElementById('main-content');
   if (mainContent) {
@@ -134,10 +151,10 @@ window.addEventListener("DOMContentLoaded", () => {
   // Immediately show loader in covered state
   showLoader();
   
-  // Hide main content initially (backup for CSS)
+  // Ensure main content is visible
   const mainContent = document.getElementById('main-content');
   if (mainContent) {
-    gsap.set(mainContent, { opacity: 0 });
+    gsap.set(mainContent, { opacity: 1 });
   }
   
   // Start the reveal animation after a short delay

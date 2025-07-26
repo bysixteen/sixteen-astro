@@ -27,15 +27,19 @@ const { title = "Sixteen", showFooter = true, showHeader = true, showBackButton 
 		<title>{title}</title>
 		
 		<!-- GSAP and Three.js CDN imports -->
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/CustomEase.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r158/three.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js" is:inline></script>
+		<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/ScrollTrigger.min.js" is:inline></script>
+		<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/CustomEase.min.js" is:inline></script>
+		<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/SplitText.min.js" is:inline></script>
+		<script type="module">
+			import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/+esm';
+			window.THREE = THREE;
+		</script>
 		
 		<style>
-			/* Initially hide main content to prevent flash during transitions */
+			/* Main content should be visible by default */
 			#main-content {
-				opacity: 0;
+				opacity: 1;
 			}
 		</style>
 	</head>
@@ -64,8 +68,8 @@ const { title = "Sixteen", showFooter = true, showHeader = true, showBackButton 
 			</svg>
 		</div>
 		{showFooter && <Footer />}
-		<script type="module" src="/scripts/nav-splittext.js"></script>
-		<script type="module" src="/scripts/logo-intro.js"></script>
-		<script type="module" src="/scripts/page-transition.js"></script>
+		<script src="/scripts/nav-splittext.js" is:inline></script>
+		<script src="/scripts/page-transition.js" is:inline></script>
+
 	</body>
 </html>

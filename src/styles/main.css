@@ -483,7 +483,7 @@ button:focus .button-text {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Debug styling to make it more visible */
+/* Phones section styling */
 #phones-section {
   min-height: 100vh;
   position: relative;

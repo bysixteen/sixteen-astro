@@ -1,24 +1,4 @@
-// Wait for GSAP and Three.js to be available
-function waitForLibraries() {
-  return new Promise((resolve) => {
-    const checkLibraries = () => {
-      if (typeof gsap !== 'undefined' && typeof THREE !== 'undefined') {
-        console.log('GSAP and Three.js loaded successfully');
-        
-        // Register GSAP plugins if available
-        if (typeof ScrollTrigger !== 'undefined') gsap.registerPlugin(ScrollTrigger);
-        if (typeof CustomEase !== 'undefined') gsap.registerPlugin(CustomEase);
-        if (typeof SplitText !== 'undefined') gsap.registerPlugin(SplitText);
-        
-        resolve();
-      } else {
-        console.log('Waiting for GSAP and Three.js to load...');
-        setTimeout(checkLibraries, 100);
-      }
-    };
-    checkLibraries();
-  });
-}
+// Gallery script for CDN-loaded GSAP and Three.js
 
 // ============================================================================
 // THREE.JS GLOBALS & STATE MANAGEMENT
@@ -77,6 +57,14 @@ let isHeavyAnimationActive = false;
 // Store references for removal of global event listeners
 let eventHandlers = [];
 
+// Project data storage
+let projectData = [];
+// Cache for already-loaded textures to avoid reloading duplicates
+const textureCache = new Map();
+
+// Loader progress globals
+let totalTexturesToLoad = 0;
+
 // ============================================================================
 // PERFORMANCE OPTIMIZATION UTILITIES
 // ============================================================================
@@ -128,6 +116,9 @@ const hoverLabelTransform = {
 function createHoverTitle() {
 	hoverLabelContainer = document.createElement("div");
 	hoverLabelContainer.className = "project-hover-label";
+	hoverLabelContainer.style.display = "flex";
+	hoverLabelContainer.style.flexDirection = "column";
+	hoverLabelContainer.style.gap = "4px";
 
 	hoverLabelTitle = document.createElement("span");
 	hoverLabelTitle.className = "project-hover-label__title";
@@ -145,15 +136,26 @@ function createHoverTitle() {
 	hoverLabelContainer._justActivated = false;
 	hoverLabelContainer.style.left = "0px";
 	hoverLabelContainer.style.top = "0px";
+	hoverLabelContainer.style.visibility = "hidden";
 }
 
 // ============================================================================
 // ANIMATION SYSTEM CONFIGURATION
 // ============================================================================
 
-// Create custom easing curve like CodePen
-if (typeof CustomEase !== "undefined") {
-	CustomEase.create("customEase", "0.65, 0.05, 0, 1");
+// Register GSAP plugins
+if (typeof gsap !== "undefined") {
+  if (typeof ScrollTrigger !== "undefined") {
+    gsap.registerPlugin(ScrollTrigger);
+  }
+  if (typeof CustomEase !== "undefined") {
+    gsap.registerPlugin(CustomEase);
+    CustomEase.create("customEase", "0.65, 0.05, 0, 1");
+  }
+  if (typeof SplitText !== "undefined") {
+    gsap.registerPlugin(SplitText);
+  } else {
+  }
 }
 
 // Core timing configuration
@@ -321,14 +323,6 @@ const TEXT_ANIM = {
   categoryStagger: 0.005, // Stagger for the category text, can be different for effect.
 };
 
-// Project data storage
-let projectData = [];
-// Cache for already-loaded textures to avoid reloading duplicates
-const textureCache = new Map();
-
-// Loader progress globals
-let totalTexturesToLoad = 0;
-
 // Border overlay removed - unnecessary decoration
 
 /**
@@ -366,15 +360,7 @@ function bakeTextureOnCanvas(texture) {
  */
 function extractProjectData() {
   const projectItems = document.querySelectorAll("#project-data .project-item");
-  
-  console.log(`Found ${projectItems.length} project items in DOM`);
-  
-  if (projectItems.length === 0) {
-    console.error('No project items found in DOM!');
-    console.log('Project data container:', document.getElementById('project-data'));
-    console.log('Project data container innerHTML:', document.getElementById('project-data')?.innerHTML);
-  }
-  
+
   projectData = Array.from(projectItems).map((item, index) => {
     const data = {
       id: index,
@@ -384,11 +370,8 @@ function extractProjectData() {
       url: item.dataset.url,
     };
     
-    console.log(`Project ${index}:`, data);
     return data;
   });
-  
-  console.log(`Extracted ${projectData.length} projects for gallery`);
 }
 
 /**
@@ -403,17 +386,7 @@ function extractProjectData() {
 function initThreeScene() {
   const canvas = document.getElementById("project-slider");
   if (!canvas) {
-    console.error('Canvas element not found!');
-    const canvasStatusElement = document.getElementById('canvas-status');
-    if (canvasStatusElement) {
-      canvasStatusElement.textContent = 'Canvas not found';
-    }
     return;
-  }
-  
-  console.log('Canvas found, initializing Three.js scene...');
-  if (canvasStatusElement) {
-    canvasStatusElement.textContent = 'Initializing...';
   }
   
   // Scene setup
@@ -499,13 +472,22 @@ function initThreeScene() {
 	);
 
 	// Remove webglcontextrestored event handler referencing reinitializeGallery
-  
-  console.log('Three.js scene initialized successfully');
-  const canvasStatusElement = document.getElementById('canvas-status');
-  if (canvasStatusElement) {
-    canvasStatusElement.textContent = 'Ready';
-  }
 }
+
+// Remove DOMContentLoaded fallback. Only initialize gallery on 'page:transition:end'.
+function startGallery() {
+  if (window.portfolioGalleryInitialized) return;
+  extractProjectData();
+  initThreeScene();
+  createGallery();
+  setupControls();
+  startRenderLoop();
+  createHoverTitle();
+  window.portfolioGalleryInitialized = true;
+}
+
+// Make startGallery globally available
+window.startGallery = startGallery; 
 
 /**
  * createGallery()
@@ -587,11 +569,10 @@ async function createGallery() {
     }
 
     // Start the animation with the correct group of cards
-
 		playIntroAnimation(introAnimationGroup);
 		isGalleryFullyLoaded = true;
   } catch (error) {
-		// Error creating gallery
+		console.error('Error creating gallery:', error);
   }
 }
 
@@ -629,28 +610,22 @@ function createProjectCard(projectInfo, index, offset = 0) {
 			const loadTextureWithRetry = (url, retryCount = 0) => {
 				const maxRetries = 2;
 
-				// Debug: Log the URL being loaded
-				console.log(`Loading texture: ${url} (attempt ${retryCount + 1})`);
-
-				textureLoader.load(
-					url,
-					(tx) => {
-						console.log(`✅ Successfully loaded texture: ${url}`);
-						textureCache.set(projectInfo.imageUrl, tx);
-						onTextureReady(tx);
-					},
-					(progress) => {},
-					(error) => {
-						console.log(`❌ Failed to load texture: ${url}`, error);
-						if (retryCount < maxRetries) {
-							setTimeout(
-								() => {
-									loadTextureWithRetry(url, retryCount + 1);
-								},
-								1000 * (retryCount + 1),
-							); // Exponential backoff
-						} else {
-							console.log(`💀 Giving up on texture: ${url}`);
+							textureLoader.load(
+				url,
+				(tx) => {
+					textureCache.set(projectInfo.imageUrl, tx);
+					onTextureReady(tx);
+				},
+				(progress) => {},
+				(error) => {
+					if (retryCount < maxRetries) {
+						setTimeout(
+							() => {
+								loadTextureWithRetry(url, retryCount + 1);
+							},
+							1000 * (retryCount + 1),
+						); // Exponential backoff
+					} else {
 							// Create fallback material for failed loads
 							const material = new THREE.MeshBasicMaterial({
 								color: 0x333333,
@@ -959,7 +934,34 @@ function createProjectCard(projectInfo, index, offset = 0) {
   });
 }
 
-// Animation is now handled entirely in createGallery()
+// Register a custom ease for snappy but smooth motion (Thibaut-inspired)
+if (typeof gsap !== "undefined" && typeof CustomEase !== "undefined") {
+  gsap.registerPlugin(CustomEase);
+  // Quick start, smooth finish (no long tail)
+  CustomEase.create("thibautSnappy", "M0,0 C0.6,0.1 0.3,1 1,1");
+}
+
+// Register a custom ease for a soft, premium settle
+if (typeof gsap !== "undefined" && typeof CustomEase !== "undefined") {
+  gsap.registerPlugin(CustomEase);
+  CustomEase.create("premiumSoftSettle", "M0,0 C0.8,0.15 0.2,1 1,1");
+}
+
+// Initialize gallery when page transition ends
+window.addEventListener('page:transition:end', startGallery);
+
+// Also initialize if libraries are already loaded
+if (typeof gsap !== "undefined" && typeof THREE !== "undefined") {
+  // Check if we're on the right page and data is ready
+  if (document.getElementById('project-data') && document.getElementById('project-slider')) {
+    // Wait a bit for everything to be ready
+    setTimeout(() => {
+      if (!window.portfolioGalleryInitialized) {
+        startGallery();
+      }
+    }, 100);
+  }
+} 
 
 /**
  * Setup controls for scrolling & interactions
@@ -1149,25 +1151,25 @@ function updateHoverStates() {
 			hoveredProjectMesh = intersected;
 
 			const data = projectData[hoveredProjectIndex] || {};
-      const expectedTitle = intersected.userData.projectInfo?.title;
-      const retrievedTitle = data.title;
 
 			if (hoverLabelTitle) hoverLabelTitle.textContent = data.title || "";
 
 			if (hoverLabelCategory)
 				hoverLabelCategory.textContent = data.category || "";
 
+      // Clean up any existing animations
+      if (hoverExitAnimation) {
+        hoverExitAnimation.kill();
+        hoverExitAnimation = null;
+      }
+      if (hoverAnimationTimeline) {
+        hoverAnimationTimeline.kill();
+        hoverAnimationTimeline = null;
+      }
+
       // SplitText animation with forced DOM update and micro-delay
       if (typeof SplitText !== "undefined") {
         // AGGRESSIVE CLEANUP: Kill everything immediately for clean state
-				if (hoverExitAnimation) {
-					hoverExitAnimation.kill();
-					hoverExitAnimation = null;
-        }
-				if (hoverAnimationTimeline) {
-					hoverAnimationTimeline.kill();
-					hoverAnimationTimeline = null;
-        }
 				if (titleTextSplit) {
 					titleTextSplit.revert();
 					titleTextSplit = null;
@@ -1222,10 +1224,35 @@ function updateHoverStates() {
             },
             "<0.01",
 					); // start 0.01 s after the title tween's START
+      } else {
+        // Fallback animation without SplitText - create character-by-character effect
+        if (hoverLabelTitle && hoverLabelCategory) {
+          // Set initial state
+          hoverLabelTitle.style.opacity = "0";
+          hoverLabelCategory.style.opacity = "0";
+          hoverLabelTitle.style.transform = "translateY(-20px)";
+          hoverLabelCategory.style.transform = "translateY(-20px)";
+
+          // Create timeline for fallback animation
+          hoverAnimationTimeline = gsap.timeline();
+          hoverAnimationTimeline
+            .to(hoverLabelTitle, {
+              opacity: 1,
+              y: 0,
+              duration: TEXT_ANIM.inDuration,
+              ease: "power2.out",
+            })
+            .to(hoverLabelCategory, {
+              opacity: 1,
+              y: 0,
+              duration: TEXT_ANIM.inDuration,
+              ease: "power2.out",
+            }, "<0.05"); // Slight stagger
+        }
       }
     }
 
-		hoverLabelContainer.style.display = "flex";
+		hoverLabelContainer.style.visibility = "visible";
 		hoverLabelContainer.style.opacity = "1";
     document.body.style.cursor = "pointer";
 
@@ -1268,7 +1295,7 @@ function updateHoverStates() {
 						hoverExitAnimation = null;
             if (tSplit) tSplit.revert();
             if (cSplit) cSplit.revert();
-						if (hoverLabelContainer) hoverLabelContainer.style.display = "none";
+						if (hoverLabelContainer) hoverLabelContainer.style.visibility = "hidden";
           },
         });
       }
@@ -1280,11 +1307,11 @@ function updateHoverStates() {
         ease: "power2.in",
         onComplete: () => {
 					hoverExitAnimation = null;
-					if (hoverLabelContainer) hoverLabelContainer.style.display = "none";
+					if (hoverLabelContainer) hoverLabelContainer.style.visibility = "hidden";
         },
       });
 		} else if (!hoverExitAnimation && hoverLabelContainer) {
-			hoverLabelContainer.style.display = "none";
+			hoverLabelContainer.style.visibility = "hidden";
     }
 
     document.body.style.cursor = "default";
@@ -1296,126 +1323,6 @@ function updateHoverStates() {
 		}
   }
 }
-
-/**
- * Enhanced hover animation system with performance optimizations
- */
-function updateHoverState(mesh, isHovered) {
-  if (!mesh || !isHovered) return;
-  
-  // Skip if we're in heavy animation mode
-	if (
-		isHeavyAnimationActive &&
-		AnimationSystem.activeCount >= ANIMATION_CONFIG.performance.heavyThreshold
-	) {
-    return;
-  }
-
-  const hoverTimeline = gsap.timeline({
-    defaults: {
-			duration: ANIMATION_CONFIG.hover.scale.duration,
-			ease: ANIMATION_CONFIG.hover.scale.ease,
-		},
-  });
-
-  // Use composite properties for better performance
-  hoverTimeline
-    .to(mesh.scale, {
-			x: isHovered ? ANIMATION_CONFIG.hover.scale.value : 1,
-			y: isHovered ? ANIMATION_CONFIG.hover.scale.value : 1,
-			z: isHovered ? ANIMATION_CONFIG.hover.scale.value : 1,
-			overwrite: true,
-    })
-		.to(
-			mesh.material.uniforms.uHover,
-			{
-      value: isHovered ? 1 : 0,
-				duration: ANIMATION_CONFIG.hover.scale.duration,
-				ease: ANIMATION_CONFIG.hover.scale.ease,
-				overwrite: true,
-			},
-			0,
-		);
-
-  return hoverTimeline;
-}
-
-/**
- * Optimized hover label positioning with GPU acceleration and vector pooling
- */
-function updateHoverLabelPosition() {
-	if (!hoveredProjectMesh || !hoverLabelContainer) return;
-
-  // Skip updates during heavy animations
-	if (isHeavyAnimationActive && frameCounter % HOVER_UPDATE_INTERVAL !== 0)
-		return;
-
-  const halfW = CONFIG.cardWidth * 0.5;
-  const halfH = CONFIG.cardHeight * 0.5;
-
-  // Use pooled vectors for better memory management
-  const bottomLeft = getPooledVector().set(-halfW, -halfH, 0);
-  const bottomRight = getPooledVector().set(halfW, -halfH, 0);
-
-  // Use matrix updates for better performance
-	hoveredProjectMesh.updateMatrixWorld(true);
-	bottomLeft.applyMatrix4(hoveredProjectMesh.matrixWorld);
-	bottomRight.applyMatrix4(hoveredProjectMesh.matrixWorld);
-
-  // Project to screen space efficiently
-  bottomLeft.project(camera);
-  bottomRight.project(camera);
-
-  // Calculate screen coordinates
-  const blX = (bottomLeft.x + 1) * 0.5 * window.innerWidth;
-  const blY = (-bottomLeft.y + 1) * 0.5 * window.innerHeight;
-  const brX = (bottomRight.x + 1) * 0.5 * window.innerWidth;
-
-  const offset = 8;
-  const onScreen = bottomRight.x > -1.2 && bottomLeft.x < 1.2;
-
-  if (onScreen) {
-		if (hoverLabelContainer.style.display === "none") {
-			hoverLabelContainer.style.display = "flex";
-			hoverLabelContainer._justActivated = true;
-    }
-
-    // Use floating-point precision for transform
-		hoverLabelContainer.style.transform = `translate3d(${blX.toFixed(3)}px, ${(blY + offset).toFixed(3)}px, 0)`;
-		hoverLabelContainer.style.width = `${(brX - blX).toFixed(3)}px`;
-  } else {
-		hoverLabelContainer.style.display = "none";
-  }
-
-  // Return vectors to pool
-  returnPooledVector(bottomLeft);
-  returnPooledVector(bottomRight);
-}
-
-/**
- * Handle infinite scroll by repositioning cards
- */
-function handleInfiniteScroll() {
-	if (!isGalleryFullyLoaded) return;
-
-  const wrapSpan = CONFIG.totalWidth * 5; // total width across 5 sets (-2..2)
-  const halfSpan = wrapSpan * 0.5;
-
-	allProjectCards.forEach((card) => {
-    if (!card || !card.userData) return;
-
-    const userData = card.userData;
-		let dx = userData.baseX + userData.offset - currentScrollPosition;
-
-    if (dx > halfSpan) {
-      userData.offset -= wrapSpan;
-    } else if (dx < -halfSpan) {
-      userData.offset += wrapSpan;
-    }
-  });
-}
-
-// Performance optimizations - cache frequently used values (variables now declared at top)
 
 /**
  * startRenderLoop() – master RAF with performance optimizations
@@ -1524,7 +1431,7 @@ function startRenderLoop() {
 		const hoverUpdateInterval =
 			isPerformanceModeActive || isHeavyAnimationActive
 				? 4
-				: HOVER_UPDATE_INTERVAL;
+				: 2;
 		if (
 			hoveredProjectMesh &&
 			hoverLabelContainer &&
@@ -1545,6 +1452,10 @@ function startRenderLoop() {
 	// Use WebGLRenderer's internal timing – automatically adapts to refresh-rate and pauses in background tabs
   renderer.setAnimationLoop(animate);
 }
+
+// Restore these constants, as they are used in the render loop and elsewhere
+const UNIFORM_UPDATE_INTERVAL = 2; // Update uniforms every 2 frames during heavy animations
+const HOVER_UPDATE_INTERVAL = 2; // Update hover labels every 2 frames
 
 /**
  * Batched card updates for better performance with uniform change detection
@@ -1714,7 +1625,88 @@ function findNearestCard(position) {
   return nearestCard;
 }
 
+/**
+ * Handle infinite scroll by repositioning cards
+ */
+function handleInfiniteScroll() {
+	if (!isGalleryFullyLoaded) return;
 
+  const wrapSpan = CONFIG.totalWidth * 5; // total width across 5 sets (-2..2)
+  const halfSpan = wrapSpan * 0.5;
+
+	allProjectCards.forEach((card) => {
+    if (!card || !card.userData) return;
+
+    const userData = card.userData;
+		let dx = userData.baseX + userData.offset - currentScrollPosition;
+
+    if (dx > halfSpan) {
+      userData.offset -= wrapSpan;
+    } else if (dx < -halfSpan) {
+      userData.offset += wrapSpan;
+    }
+  });
+}
+
+// Clamp helper for micro-jitter
+function clampToEpsilon(val, target, epsilon = 0.0001) {
+	return Math.abs(val - target) < epsilon ? target : val;
+}
+
+// Optimized hover label position update
+let lastHoverLabelTransform = "";
+
+function updateHoverLabelPositionOptimized() {
+	if (!hoveredProjectMesh || !hoverLabelContainer) return;
+
+	// Skip updates during heavy animations
+	if (isHeavyAnimationActive && frameCounter % HOVER_UPDATE_INTERVAL !== 0)
+		return;
+
+	const halfW = CONFIG.cardWidth * 0.5;
+	const halfH = CONFIG.cardHeight * 0.5;
+
+	// Use pooled vectors for better memory management
+	const bottomLeft = getPooledVector().set(-halfW, -halfH, 0);
+	const bottomRight = getPooledVector().set(halfW, -halfH, 0);
+
+	// Use matrix updates for better performance
+	hoveredProjectMesh.updateMatrixWorld(true);
+	bottomLeft.applyMatrix4(hoveredProjectMesh.matrixWorld);
+	bottomRight.applyMatrix4(hoveredProjectMesh.matrixWorld);
+
+	// Project to screen space efficiently
+	bottomLeft.project(camera);
+	bottomRight.project(camera);
+
+	// Calculate screen coordinates
+	const blX = (bottomLeft.x + 1) * 0.5 * window.innerWidth;
+	const blY = (-bottomLeft.y + 1) * 0.5 * window.innerHeight;
+	const brX = (bottomRight.x + 1) * 0.5 * window.innerWidth;
+
+	const offset = 8;
+	const onScreen = bottomRight.x > -1.2 && bottomLeft.x < 1.2;
+
+	if (onScreen) {
+		if (hoverLabelContainer.style.visibility === "hidden") {
+			hoverLabelContainer.style.visibility = "visible";
+			hoverLabelContainer._justActivated = true;
+		}
+
+		// Use floating-point precision for transform
+		const transform = `translate3d(${blX.toFixed(3)}px, ${(blY + offset).toFixed(3)}px, 0)`;
+		if (transform !== lastHoverLabelTransform) {
+			hoverLabelContainer.style.transform = transform;
+			lastHoverLabelTransform = transform;
+		}
+	} else {
+		hoverLabelContainer.style.visibility = "hidden";
+	}
+
+	// Return vectors to pool
+	returnPooledVector(bottomLeft);
+	returnPooledVector(bottomRight);
+}
 
 /**
  * playIntroAnimation()
@@ -1814,253 +1806,4 @@ function playIntroAnimation(introAnimationGroup) {
     }
   });
   return tl;
-}
-
-// Register a custom ease for snappy but smooth motion (Thibaut-inspired)
-if (typeof gsap !== "undefined" && typeof CustomEase !== "undefined") {
-  gsap.registerPlugin(CustomEase);
-  // Quick start, smooth finish (no long tail)
-  CustomEase.create("thibautSnappy", "M0,0 C0.6,0.1 0.3,1 1,1");
-}
-
-// Register a custom ease for a soft, premium settle
-if (typeof gsap !== "undefined" && typeof CustomEase !== "undefined") {
-  gsap.registerPlugin(CustomEase);
-  CustomEase.create("premiumSoftSettle", "M0,0 C0.8,0.15 0.2,1 1,1");
-}
-
-// Performance cleanup function
-function performanceCleanup() {
-  // Clear uniform cache
-  uniformCache.clear();
-  
-  // Clear vector pool
-  vectorPool.length = 0;
-  
-  // Reset performance flags
-  isPerformanceModeActive = false;
-	isHeavyAnimationActive = false;
-  frameCounter = 0;
-}
-
-// Add performance cleanup to window unload
-window.addEventListener("beforeunload", performanceCleanup);
-
-// Add page visibility and focus event handlers for proper reinitialization
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-		// Page is hidden, pause animations but don't destroy everything
-		if (isSceneInitialized && renderer) {
-			// Pause the render loop
-			renderer.setAnimationLoop(null);
-			// Kill GSAP animations but keep scene intact
-			AnimationSystem.killAll();
-		}
-  } else {
-		// Page is visible again, restart render loop and refresh textures if needed
-    setTimeout(() => {
-			if (isSceneInitialized && renderer) {
-				// Check if textures need to be refreshed (WebGL context might have been lost)
-				if (allProjectCards.length > 0) {
-					allProjectCards.forEach((card) => {
-						if (
-							card.material &&
-							card.material.uniforms &&
-							card.material.uniforms.uTexture
-						) {
-							const texture = card.material.uniforms.uTexture.value;
-							if (texture && texture.image) {
-								texture.needsUpdate = true;
-							}
-						}
-					});
-				}
-
-				startRenderLoop();
-			}
-		}, 100);
-	}
-});
-
-// Handle page focus events - only restart render loop, don't reinitialize
-window.addEventListener("focus", () => {
-	if (isSceneInitialized && renderer) {
-		setTimeout(() => {
-			startRenderLoop();
-		}, 100);
-	}
-});
-
-// Clamp helper for micro-jitter
-function clampToEpsilon(val, target, epsilon = 0.0001) {
-	return Math.abs(val - target) < epsilon ? target : val;
-}
-
-// Set uniform only if changed by epsilon
-function setUniformIfChanged(uniform, value, epsilon = 0.0001) {
-	if (typeof uniform.value === "number") {
-		if (Math.abs(uniform.value - value) > epsilon) {
-			uniform.value = value;
-		}
-	} else if (uniform.value && typeof uniform.value.set === "function") {
-		if (
-			Math.abs(uniform.value.x - value.x) > epsilon ||
-			Math.abs(uniform.value.y - value.y) > epsilon
-		) {
-			uniform.value.set(value.x, value.y);
-		}
-	}
-}
-
-// Optimized hover label position update
-let lastHoverLabelTransform = "";
-
-function updateHoverLabelPositionOptimized() {
-	if (!hoveredProjectMesh || !hoverLabelContainer) return;
-
-	// Skip updates during heavy animations
-	if (isHeavyAnimationActive && frameCounter % HOVER_UPDATE_INTERVAL !== 0)
-		return;
-
-	const halfW = CONFIG.cardWidth * 0.5;
-	const halfH = CONFIG.cardHeight * 0.5;
-
-	// Use pooled vectors for better memory management
-	const bottomLeft = getPooledVector().set(-halfW, -halfH, 0);
-	const bottomRight = getPooledVector().set(halfW, -halfH, 0);
-
-	// Use matrix updates for better performance
-	hoveredProjectMesh.updateMatrixWorld(true);
-	bottomLeft.applyMatrix4(hoveredProjectMesh.matrixWorld);
-	bottomRight.applyMatrix4(hoveredProjectMesh.matrixWorld);
-
-	// Project to screen space efficiently
-	bottomLeft.project(camera);
-	bottomRight.project(camera);
-
-	// Calculate screen coordinates
-	const blX = (bottomLeft.x + 1) * 0.5 * window.innerWidth;
-	const blY = (-bottomLeft.y + 1) * 0.5 * window.innerHeight;
-	const brX = (bottomRight.x + 1) * 0.5 * window.innerWidth;
-
-	const offset = 8;
-	const onScreen = bottomRight.x > -1.2 && bottomLeft.x < 1.2;
-
-	if (onScreen) {
-		if (hoverLabelContainer.style.display === "none") {
-			hoverLabelContainer.style.display = "flex";
-			hoverLabelContainer._justActivated = true;
-		}
-
-		// Use floating-point precision for transform
-		const transform = `translate3d(${blX.toFixed(3)}px, ${(blY + offset).toFixed(3)}px, 0)`;
-		if (transform !== lastHoverLabelTransform) {
-			hoverLabelContainer.style.transform = transform;
-			lastHoverLabelTransform = transform;
-		}
-		hoverLabelContainer.style.width = `${(brX - blX).toFixed(3)}px`;
-	} else {
-		hoverLabelContainer.style.display = "none";
-	}
-
-	// Return vectors to pool
-	returnPooledVector(bottomLeft);
-	returnPooledVector(bottomRight);
-}
-
-// Restore these constants, as they are used in the render loop and elsewhere
-const UNIFORM_UPDATE_INTERVAL = 2; // Update uniforms every 2 frames during heavy animations
-const HOVER_UPDATE_INTERVAL = 2; // Update hover labels every 2 frames
-
-// Initialize gallery on 'page:transition:end' or DOMContentLoaded as fallback
-async function startGallery() {
-  if (window.portfolioGalleryInitialized) return;
-  
-  // Update status
-  const galleryStatusElement = document.getElementById('gallery-status');
-  if (galleryStatusElement) {
-    galleryStatusElement.textContent = 'Initializing...';
-  }
-  
-  console.log('Starting gallery initialization...');
-  
-  // Wait for libraries to be loaded
-  await waitForLibraries();
-  
-  // Check if project data is available
-  const projectItems = document.querySelectorAll("#project-data .project-item");
-  if (projectItems.length === 0) {
-    console.log('No project data found, waiting...');
-    if (galleryStatusElement) {
-      galleryStatusElement.textContent = 'Waiting for data...';
-    }
-    // Retry after a short delay
-    setTimeout(() => {
-      if (!window.portfolioGalleryInitialized) {
-        startGallery().catch(console.error);
-      }
-    }, 500);
-    return;
-  }
-  
-  // Also check global flag
-  if (!window.projectDataReady) {
-    console.log('Project data not ready yet, waiting...');
-    if (galleryStatusElement) {
-      galleryStatusElement.textContent = 'Waiting for data flag...';
-    }
-    // Retry after a short delay
-    setTimeout(() => {
-      if (!window.portfolioGalleryInitialized) {
-        startGallery().catch(console.error);
-      }
-    }, 500);
-    return;
-  }
-  
-  console.log(`Found ${projectItems.length} project items, proceeding with initialization`);
-  
-  extractProjectData();
-  initThreeScene();
-  createGallery();
-  setupControls();
-  startRenderLoop();
-  createHoverTitle();
-  window.portfolioGalleryInitialized = true;
-  
-  // Update status
-  if (galleryStatusElement) {
-    galleryStatusElement.textContent = 'Running';
-  }
-  console.log('Gallery initialization complete');
-}
-
-// Make startGallery globally available
-window.startGallery = startGallery;
-
-// Listen for page transition end (for page transitions)
-window.addEventListener('page:transition:end', () => {
-  console.log('Page transition end event fired');
-  startGallery().catch(console.error);
-});
-
-// Listen for custom project data ready event
-window.addEventListener('projectData:ready', (event) => {
-  console.log('Project data ready event fired', event.detail);
-  startGallery().catch(console.error);
-});
-
-// Fallback: also initialize on DOMContentLoaded if not already initialized
-window.addEventListener('DOMContentLoaded', () => {
-  console.log('DOMContentLoaded event fired');
-  // Wait a bit to ensure data is loaded, then try to initialize
-  setTimeout(() => {
-    if (!window.portfolioGalleryInitialized) {
-      console.log('Initializing gallery from DOMContentLoaded fallback');
-      startGallery().catch(console.error);
-    }
-  }, 1000);
-});
-
-// Debug: Log when the script loads
-console.log('Gallery script loaded and event listeners set up');
+} 

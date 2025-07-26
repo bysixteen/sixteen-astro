@@ -121,12 +121,10 @@ try {
   }
 
   if (!API) {
-    console.log('API URL not configured');
     project = null;
     client = "Project Not Found";
   } else {
     const apiUrl = `${API}/works?${query}`;
-    console.log('API URL:', apiUrl);
     
     const res = await fetch(apiUrl, {
       headers: {
@@ -134,20 +132,13 @@ try {
       },
     });
 
-    console.log('Response status:', res.status);
-    console.log('Response ok:', res.ok);
-
     if (!res.ok) {
-      console.log('API request failed with status:', res.status);
       project = null;
       client = "Project Not Found";
     } else {
       const responseData = await res.json();
-      console.log('Full API response:', JSON.stringify(responseData, null, 2));
       const workData = responseData?.data?.[0];
-      console.log('Work data found:', workData);
       if (!workData) {
-        console.log('No work data found - data array is empty');
         project = null;
         client = "Project Not Found";
       } else {
@@ -174,16 +165,12 @@ try {
           url: a.url
         };
         
-        // Debug log - remove this after confirming it works
-        console.log('MyRole data:', a.MyRole);
-        console.log('Project MyRole:', project.MyRole);
         client = project?.Client || "Project Not Found";
         liveUrl = project?.ExternalLink?.Link || project?.ExternalLink?.link || project?.liveUrl || project?.live_url || project?.url;
       }
     }
   }
 } catch (error) {
-  console.log('API error:', error);
   project = null;
   client = "Project Not Found";
 }

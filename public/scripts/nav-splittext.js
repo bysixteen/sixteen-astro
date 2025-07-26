@@ -1,5 +1,3 @@
-console.log("nav-splittext.js loaded");
-
 // Debug function to log availability positions
 window.logAvailabilityPositions = () => {
   const availLink = document.getElementById("availability-link");
@@ -8,70 +6,41 @@ window.logAvailabilityPositions = () => {
     const emailSpan = availLink.querySelector(".availability-email");
     
     if (defaultSpan && emailSpan) {
-      console.log("=== MANUAL POSITION DEBUG ===");
-      console.log("Default span (Available):", {
-        text: defaultSpan.textContent,
-        transform: defaultSpan.style.transform,
-        getBoundingClientRect: defaultSpan.getBoundingClientRect(),
-        computedStyle: window.getComputedStyle(defaultSpan)
-      });
-      console.log("Email span (daniel@bysixteen.co.uk):", {
-        text: emailSpan.textContent,
-        transform: emailSpan.style.transform,
-        getBoundingClientRect: emailSpan.getBoundingClientRect(),
-        computedStyle: window.getComputedStyle(emailSpan)
-      });
-      
-      // Also log individual characters if SplitText is available
-      if (SplitText) {
-        try {
-          const splitDefault = new SplitText(defaultSpan, { 
-            type: "chars",
-            charsClass: "split-char",
-            position: "relative"
-          });
-          const splitEmail = new SplitText(emailSpan, { 
-            type: "chars",
-            charsClass: "split-char",
-            position: "relative"
-          });
-          
-          console.log("Default characters:");
-          splitDefault.chars.forEach((char, i) => {
-            const rect = char.getBoundingClientRect();
-            console.log(`  ${i}: "${char.textContent}" - transform: "${char.style.transform}" - Y: ${rect.top}px`);
-          });
-          
-          console.log("Email characters:");
-          splitEmail.chars.forEach((char, i) => {
-            const rect = char.getBoundingClientRect();
-            console.log(`  ${i}: "${char.textContent}" - transform: "${char.style.transform}" - Y: ${rect.top}px`);
-          });
-        } catch (error) {
-          console.log("SplitText already initialized or not available");
-        }
-      }
+      // Debug function - kept for potential future use but cleaned up
     }
   }
 };
 
-// Register GSAP plugins
-gsap.registerPlugin(CustomEase);
+// Wait for GSAP to be available
+function waitForGSAP() {
+  return new Promise((resolve) => {
+    const checkGSAP = () => {
+      if (typeof gsap !== 'undefined' && typeof CustomEase !== 'undefined') {
+        
+        // Register GSAP plugins
+        gsap.registerPlugin(CustomEase);
+        
+        CustomEase.create("customEase", "0.65, 0.05, 0, 1");
+        
+        resolve();
+      } else {
+        setTimeout(checkGSAP, 100);
+      }
+    };
+    checkGSAP();
+  });
+}
 
-// Note: SplitText is a premium plugin, so we'll handle it gracefully
-let SplitText = null;
-
-CustomEase.create("customEase", "0.65, 0.05, 0, 1");
-
-// Test function to verify GSAP and SplitText are working
+// Test function to verify GSAP is working
 function testGSAP() {
-  console.log("GSAP version:", gsap.version);
-  console.log("SplitText plugin available:", !!SplitText);
-  console.log("CustomEase plugin:", CustomEase);
+  // Function kept for potential future use but cleaned up
 }
 
 // Animation sequence for gallery and nav (navigation-controls removed)
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  // Wait for GSAP to be available
+  await waitForGSAP();
+  
   const gallery = document.getElementById('project-slider');
   const nav = document.querySelector('header.nav');
 
@@ -84,9 +53,13 @@ window.addEventListener('DOMContentLoaded', () => {
   if (nav) tl.to(nav, { opacity: 1, duration: 0.7, ease: 'power2.out' }, '-=0.3');
 });
 
-document.fonts.ready.then(() => {
+document.fonts.ready.then(async () => {
+  // Wait for GSAP to be available
+  await waitForGSAP();
+  
   // Test GSAP functionality
   testGSAP();
+  
   // --- REGULAR NAV LINKS & BUTTONS ---
   document.querySelectorAll('[data-split="letters"]').forEach(el => {
     // Skip availability link children
@@ -96,19 +69,35 @@ document.fonts.ready.then(() => {
     const container = el.closest('.nav-split, .btn-split, button');
     if (!container) return;
 
-    if (SplitText) {
-      const split = new SplitText(el, { type: 'chars' });
-      const tl = gsap.timeline({ paused: true })
-        .to(split.chars, {
-          y: '-1.25em',
-          duration: 0.735,
-          stagger: 0.00666667,
-          ease: 'customEase'
-        });
+    // Create a simple character-by-character animation without SplitText
+    const text = el.textContent;
+    const chars = text.split('').map(char => {
+      const span = document.createElement('span');
+      span.textContent = char;
+      span.style.display = 'inline-block';
+      span.style.position = 'relative';
+      // Preserve spaces by ensuring they have proper width
+      if (char === ' ') {
+        span.style.whiteSpace = 'pre';
+        span.style.width = '0.2em'; // Give spaces a small width
+      }
+      return span;
+    });
+    
+    // Clear the element and add the character spans
+    el.textContent = '';
+    chars.forEach(char => el.appendChild(char));
+    
+    const tl = gsap.timeline({ paused: true })
+      .to(chars, {
+        y: '-1.25em',
+        duration: 0.735,
+        stagger: 0.00666667,
+        ease: 'customEase'
+      });
 
-      container.addEventListener('mouseenter', () => tl.play());
-      container.addEventListener('mouseleave', () => tl.reverse());
-    }
+    container.addEventListener('mouseenter', () => tl.play());
+    container.addEventListener('mouseleave', () => tl.reverse());
   });
 
   // --- AVAILABILITY LINK - CHARACTER ANIMATION ---
@@ -117,11 +106,46 @@ document.fonts.ready.then(() => {
     const defaultSpan = availLink.querySelector(".availability-default");
     const emailSpan = availLink.querySelector(".availability-email");
 
-    if (defaultSpan && emailSpan && SplitText) {
+    if (defaultSpan && emailSpan) {
       availLink.classList.add('js-enabled'); // Signal that JS is in control
 
-      const splitDefault = new SplitText(defaultSpan, { type: "chars" });
-      const splitEmail = new SplitText(emailSpan, { type: "chars" });
+      // Create character-by-character animation for availability text
+      const defaultText = defaultSpan.textContent;
+      const emailText = emailSpan.textContent;
+      
+      // Split default text into characters
+      const defaultChars = defaultText.split('').map(char => {
+        const span = document.createElement('span');
+        span.textContent = char;
+        span.style.display = 'inline-block';
+        span.style.position = 'relative';
+        // Preserve spaces by ensuring they have proper width
+        if (char === ' ') {
+          span.style.whiteSpace = 'pre';
+          span.style.width = '0.2em'; // Give spaces a small width
+        }
+        return span;
+      });
+      
+      // Split email text into characters
+      const emailChars = emailText.split('').map(char => {
+        const span = document.createElement('span');
+        span.textContent = char;
+        span.style.display = 'inline-block';
+        span.style.position = 'relative';
+        // Preserve spaces by ensuring they have proper width
+        if (char === ' ') {
+          span.style.whiteSpace = 'pre';
+          span.style.width = '0.2em'; // Give spaces a small width
+        }
+        return span;
+      });
+      
+      // Clear and populate the spans
+      defaultSpan.textContent = '';
+      emailSpan.textContent = '';
+      defaultChars.forEach(char => defaultSpan.appendChild(char));
+      emailChars.forEach(char => emailSpan.appendChild(char));
 
       const tl = gsap.timeline({
           paused: true,
@@ -133,12 +157,12 @@ document.fonts.ready.then(() => {
       });
 
       // Set initial positions
-      gsap.set(splitDefault.chars, { y: "0em", opacity: 1 });
-      gsap.set(splitEmail.chars, { y: "1.25em", opacity: 0 });
+      gsap.set(defaultChars, { y: "0em", opacity: 1 });
+      gsap.set(emailChars, { y: "1.25em", opacity: 0 });
 
       // Define the animation
-      tl.to(splitDefault.chars, { y: "-1.25em", opacity: 0 });
-      tl.to(splitEmail.chars, { y: "0em", opacity: 1 }, "<"); // Start at the same time
+      tl.to(defaultChars, { y: "-1.25em", opacity: 0 });
+      tl.to(emailChars, { y: "0em", opacity: 1 }, "<"); // Start at the same time
 
       // Add event listeners
       availLink.addEventListener("mouseenter", () => tl.play());
