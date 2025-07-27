@@ -20,19 +20,28 @@ import '../styles/main.css';
     
     async function loadWorks() {
       try {
+        console.log('Strapi URL:', STRAPI_URL);
         if (!STRAPI_URL) {
           throw new Error('Strapi URL is not configured');
         }
         
+        console.log('Fetching from:', STRAPI_URL + '/works?populate=*');
         // Fetch from Strapi
-        const worksRes = await fetch(STRAPI_URL + '/works?populate=*');
+        const worksRes = await fetch(STRAPI_URL + '/works?populate=*', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
         
         if (!worksRes.ok) {
           throw new Error(`Failed to fetch from Strapi: ${worksRes.status} ${worksRes.statusText}`);
         }
         
         const response = await worksRes.json();
+        console.log('Strapi response:', response);
         const works = response.data || [];
+        console.log('Works data:', works);
         
         // Populate project data
         const projectData = document.getElementById('project-data');
@@ -69,6 +78,7 @@ import '../styles/main.css';
           window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: works.length } }));
         }
       } catch (error) {
+        console.error('Error loading works from Strapi:', error);
         // Fallback to sample data if Strapi is unavailable
         const projectData = document.getElementById('project-data');
         if (projectData) {
