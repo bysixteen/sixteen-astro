@@ -1,13 +1,14 @@
 /* ==========================================================================
-   GOOGLE FONTS IMPORT (must be first)
+   IMPORTS & EXTERNAL DEPENDENCIES
    ========================================================================== */
+
+/* Google Fonts Import */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-html, body {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  font-weight: 400; /* Adjust as needed */
-}
+/* Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ==========================================================================
    CUSTOM FONTS
@@ -21,26 +22,10 @@ html, body {
 }
 
 /* ==========================================================================
-   PROJECT PAGE SPACING
-   ========================================================================== */
-.content-section {
-  @apply pb-4 md:pb-8 lg:pb-64;
-}
-
-/* Hero section with appropriate spacing */
-.hero-section {
-  @apply pb-4 md:pb-8 lg:pb-16;
-}
-
-/* First section (hero) should not have top padding */
-.content-section:first-child {
-  @apply pt-0;
-}
-
-/* ==========================================================================
-   DESIGN SYSTEM PRIMITIVES
+   DESIGN SYSTEM - PRIMITIVES
    ========================================================================== */
 :root {
+  /* Color Primitives */
   --primitive-white: #FFFFFF;
   --primitive-black: #172121;
   --primitive-grey: #ABA79F;
@@ -49,10 +34,16 @@ html, body {
   --primitive-accent: #06F795;
   --primitive-accent-hover: #05e184;
   --primitive-accent-pressed: #04d474;
+
+  /* Typography & Spacing */
+  --font-size-small: 11px;
+  --transition-fast: 0.2s ease-out;
+  --transition-medium: 0.3s ease;
+  --premium-ease: cubic-bezier(0.8, 0.15, 0.2, 1);
 }
 
 /* ==========================================================================
-   DESIGN SYSTEM TOKENS
+   DESIGN SYSTEM - TOKENS
    ========================================================================== */
 :root {
   /* INK TOKENS (Static content - text & icons) */
@@ -83,7 +74,9 @@ html, body {
   --color-interface-background-input-disabled: var(--primitive-dark);
 }
 
-/* THEME OVERRIDES */
+/* ==========================================================================
+   THEME VARIATIONS
+   ========================================================================== */
 [data-theme="dark"] {
   --color-interface-background-fill-default: var(--primitive-black);
   --color-interface-background-fill-subtle: var(--primitive-dark);
@@ -103,42 +96,38 @@ html, body {
 }
 
 /* ==========================================================================
-   TAILWIND IMPORTS
-   ========================================================================== */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* ==========================================================================
-   CSS CUSTOM PROPERTIES (Non-color)
-   ========================================================================== */
-:root {
-  --font-size-small: 11px;
-  --transition-fast: 0.2s ease-out;
-  --transition-medium: 0.3s ease;
-  --premium-ease: cubic-bezier(0.8, 0.15, 0.2, 1);
-}
-
-/* ==========================================================================
    BASE STYLES
    ========================================================================== */
 @layer base {
+  html, body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-weight: 400;
+  }
+
+  html {
+    background-color: var(--color-interface-background-fill-default);
+  }
+
   body {
     @apply font-sans bg-interface-bg-default text-ink-text-secondary;
     overflow-x: hidden;
+    background-color: var(--color-interface-background-fill-default) !important;
   }
+
   h1 {
     @apply text-9xl text-ink-text-primary font-sans;
   }
 }
 
 /* ==========================================================================
-   FOCUS & ACCESSIBILITY
+   ACCESSIBILITY & FOCUS MANAGEMENT
    ========================================================================== */
 :focus:not(:focus-visible) {
   outline: none;
   box-shadow: none;
 }
+
 canvas:focus,
 body:focus,
 div:focus {
@@ -147,14 +136,16 @@ div:focus {
 }
 
 /* ==========================================================================
-   TYPOGRAPHY
+   TYPOGRAPHY SYSTEM
    ========================================================================== */
+
+/* Brand Typography */
 .brand-typography {
   @apply mono-text;
   color: var(--color-ink-text-secondary-subtle);
 }
 
-/* Unified mono text style for consistent application */
+/* Unified Mono Text Style */
 .mono-text {
   @apply font-mono text-xs uppercase;
   letter-spacing: normal;
@@ -162,24 +153,250 @@ div:focus {
   vertical-align: top;
 }
 
-/* Button text with splittext animation (semantic) */
+/* Button Text with SplitText Animation */
 .button-text {
   @apply m-0 mono-text;
   color: var(--color-ink-text-primary-dark);
   text-shadow: 0px 1.25em currentColor; /* create second line for animation */
 }
-/* Keep colour consistent on hover/focus */
+
 .button-text.is-animating .char,
 button:hover .button-text,
 button:focus .button-text {
   color: var(--color-ink-text-primary-dark);
 }
 
-/* Button clipping wrapper to hide second line until animated */
+/* Button Clipping Wrapper */
 .button-clip {
   overflow: hidden;
   height: 1em;
   line-height: 1;
+}
+
+/* ==========================================================================
+   LAYOUT & SPACING
+   ========================================================================== */
+
+/* Content Section Spacing */
+.content-section {
+  @apply pb-4 md:pb-8 lg:pb-64;
+}
+
+.content-section:first-child {
+  @apply pt-0;
+}
+
+/* Hero Section */
+.hero-section {
+  @apply pb-4 md:pb-8 lg:pb-16;
+}
+
+/* Overview Text */
+.overview {
+  font-size: 24px;
+  line-height: 1.7;
+}
+
+/* ==========================================================================
+   NAVIGATION COMPONENTS
+   ========================================================================== */
+
+/* Header Navigation */
+.nav__header {
+  position: relative;
+  width: 100%;
+  top: 0;
+  background-color: transparent;
+  padding-left: 24px;
+  padding-right: 24px;
+  z-index: 50;
+}
+
+.nav__brand {
+  @apply inline-block mono-text;
+  transition: opacity var(--transition-fast);
+}
+
+.nav__link {
+  @apply inline-block relative overflow-hidden;
+  transition: color var(--transition-fast);
+  line-height: 1;
+  vertical-align: top;
+}
+
+.nav__link:hover,
+.nav__link:focus {
+  color: var(--color-interactive-background-primary-default);
+}
+
+.nav-text {
+  @apply m-0 mono-text;
+  color: var(--color-ink-text-secondary);
+  text-shadow: 0px 1.25em currentColor;
+}
+
+.nav-text.is-animating .char,
+.nav__link:hover .nav-text,
+.nav__link:focus .nav-text {
+  color: var(--color-ink-text-primary);
+}
+
+/* ==========================================================================
+   AVAILABILITY COMPONENT
+   ========================================================================== */
+.availability-label {
+  @apply mono-text;
+  color: var(--color-ink-text-secondary);
+}
+
+.availability-link {
+  @apply inline-block relative mono-text text-right cursor-pointer;
+  color: var(--color-interactive-background-primary-default);
+  height: 1.2em;
+  overflow: hidden;
+  min-width: 240px;
+}
+
+.availability-default,
+.availability-email {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-width: 240px;
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+
+.availability-link:hover .availability-default,
+.availability-link:hover .availability-email {
+  transform: none;
+}
+
+.js-enabled .availability-default,
+.js-enabled .availability-email {
+  transition: none;
+}
+
+.availability-link,
+.availability-link * {
+  pointer-events: auto;
+}
+
+/* ==========================================================================
+   GALLERY COMPONENTS
+   ========================================================================== */
+
+/* Main Gallery Canvas */
+#project-slider {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  cursor: default;
+  will-change: transform;
+  z-index: 10;
+  transform: translateZ(0);
+}
+
+#project-slider.card-hover {
+  cursor: pointer;
+}
+
+/* Hidden Data Container */
+#project-data {
+  display: none;
+}
+
+/* Hover Labels */
+.project-hover-label {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  opacity: 1;
+  will-change: transform;
+  z-index: 20;
+  transform: translateZ(0);
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.project-hover-label__title,
+.project-hover-label__category {
+  @apply mono-text;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  will-change: transform;
+  margin: 0;
+}
+
+.project-hover-label__title {
+  flex-grow: 1;
+  color: var(--color-ink-text-primary);
+  text-align: left;
+}
+
+.project-hover-label__category {
+  flex-shrink: 0;
+  color: var(--color-ink-text-primary);
+  font-feature-settings: "kern" 1;
+  text-rendering: optimizeLegibility;
+  text-align: right;
+}
+
+/* Navigation Controls */
+.navigation-controls {
+  display: flex;
+  align-items: center;
+  color: var(--color-ink-text-secondary);
+}
+
+.navigation-controls__arrow {
+  @apply cursor-pointer mono-text;
+  padding-left: 4px;
+  padding-right: 4px;
+  color: var(--color-ink-text-secondary);
+}
+
+.navigation-controls__arrow:hover {
+  color: var(--color-ink-text-primary);
+}
+
+.navigation-controls__text {
+  @apply mono-text;
+  color: var(--color-ink-text-secondary);
+}
+
+/* ==========================================================================
+   FOOTER COMPONENT
+   ========================================================================== */
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: transparent;
+  z-index: 40;
+}
+
+.footer__location,
+.footer__date,
+.footer__separator,
+.footer__tagline, 
+.footer__time {
+  @apply mono-text;
+  color: var(--color-ink-text-secondary);
+}
+
+.footer__separator {
+  color: var(--color-ink-text-secondary);
+  opacity: 0.5;
 }
 
 /* ==========================================================================
@@ -200,10 +417,12 @@ button:focus .button-text {
   z-index: 99999;
   transition: opacity var(--transition-medium);
 }
+
 .loader-wrap.hidden {
   opacity: 0;
   pointer-events: none;
 }
+
 #transitionSVG {
   position: fixed;
   top: 0;
@@ -213,181 +432,9 @@ button:focus .button-text {
   display: block;
   z-index: 10;
 }
+
 #transitionPath { z-index: 2; }
 #transitionPath2 { z-index: 1; }
-
-/* ==========================================================================
-   NAVIGATION
-   ========================================================================== */
-.nav__header {
-  position: relative;
-  width: 100%;
-  top: 0;
-  background-color: transparent;
-  padding-left: 24px;
-  padding-right: 24px;
-  z-index: 50;
-}
-.nav__brand {
-  @apply inline-block mono-text;
-  transition: opacity var(--transition-fast);
-}
-.nav__link {
-  @apply inline-block relative overflow-hidden;
-  transition: color var(--transition-fast);
-  line-height: 1;
-  vertical-align: top;
-}
-.nav__link:hover,
-.nav__link:focus {
-  color: var(--color-interactive-background-primary-default);
-}
-.nav-text {
-  @apply m-0 mono-text;
-  color: var(--color-ink-text-secondary);
-  text-shadow: 0px 1.25em currentColor;
-}
-.nav-text.is-animating .char,
-.nav__link:hover .nav-text,
-.nav__link:focus .nav-text {
-  color: var(--color-ink-text-primary);
-}
-
-/* ==========================================================================
-   AVAILABILITY LINK
-   ========================================================================== */
-.availability-label {
-  @apply mono-text;
-  color: var(--color-ink-text-secondary);
-}
-.availability-link {
-  @apply inline-block relative mono-text text-right cursor-pointer;
-  color: var(--color-interactive-background-primary-default);
-  height: 1.2em;
-  overflow: hidden;
-  min-width: 240px;
-}
-.availability-default,
-.availability-email {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  min-width: 240px;
-  white-space: nowrap;
-  will-change: transform, opacity;
-}
-.availability-link:hover .availability-default,
-.availability-link:hover .availability-email {
-  transform: none;
-}
-.js-enabled .availability-default,
-.js-enabled .availability-email {
-  transition: none;
-}
-.availability-link,
-.availability-link * {
-  pointer-events: auto;
-}
-
-/* ==========================================================================
-   GALLERY
-   ========================================================================== */
-#project-slider {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  cursor: default;
-  will-change: transform;
-  z-index: 10;
-  transform: translateZ(0);
-}
-#project-slider.card-hover {
-  cursor: pointer;
-}
-#project-data {
-  display: none;
-}
-.project-hover-label {
-  position: fixed;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  opacity: 1;
-  will-change: transform;
-  z-index: 20;
-  transform: translateZ(0);
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 24px;
-}
-.project-hover-label__title,
-.project-hover-label__category {
-  @apply mono-text;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  will-change: transform;
-  margin: 0;
-}
-.project-hover-label__title {
-  flex-grow: 1;
-  color: var(--color-ink-text-primary);
-  text-align: left;
-}
-.project-hover-label__category {
-  flex-shrink: 0;
-  color: var(--color-ink-text-primary);
-  font-feature-settings: "kern" 1;
-  text-rendering: optimizeLegibility;
-  text-align: right;
-}
-.navigation-controls {
-  display: flex;
-  align-items: center;
-  color: var(--color-ink-text-secondary);
-}
-.navigation-controls__arrow {
-  @apply cursor-pointer mono-text;
-  padding-left: 4px;
-  padding-right: 4px;
-  color: var(--color-ink-text-secondary);
-}
-.navigation-controls__arrow:hover {
-  color: var(--color-ink-text-primary);
-}
-.navigation-controls__text {
-  @apply mono-text;
-  color: var(--color-ink-text-secondary);
-}
-
-/* ==========================================================================
-   FOOTER
-   ========================================================================== */
-.footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background-color: transparent;
-  z-index: 40;
-}
-.footer__location,
-.footer__date,
-.footer__separator,
-.footer__tagline, 
-.footer__time {
-  @apply mono-text;
-  color: var(--color-ink-text-secondary);
-}
-.footer__separator {
-  color: var(--color-ink-text-secondary);
-  opacity: 0.5;
-}
 
 /* ==========================================================================
    TEXT ANIMATIONS
@@ -410,59 +457,29 @@ button:focus .button-text {
 }
 
 /* ==========================================================================
-   UTILITY CLASSES
+   PROJECT-SPECIFIC COMPONENTS
    ========================================================================== */
-.u--clip { overflow: hidden; }
-.u--rel { position: relative; z-index: 10; }
 
-/* Button-specific text clipping */
-.button-clip {
-  overflow: hidden;
-  height: 1em;
-  line-height: 1;
-}
-.hover-label, 
-.hoverContainer, 
-.hover-label-overlay {
-  will-change: transform;
-  pointer-events: none;
-  transform: translate3d(0,0,0);
-  contain: layout style paint;
-}
-
-/* ==========================================================================
-   PROJECT TAGS
-   ========================================================================== */
+/* Project Tags */
 .project-tag {
   @apply inline-block uppercase mono-text px-2 py-2 text-ink-text-secondary rounded-md;
   background-color: var(--color-interface-background-tag-default);
 }
 
-@layer utilities {
-  .px-grid {
-    padding-left: 24px;
-    padding-right: 24px;
-  }
-  @media (min-width: 768px) {
-    .px-grid {
-      padding-left: 40px;
-      padding-right: 40px;
-    }
-  }
-  @media (min-width: 1024px) {
-    .px-grid {
-      padding-left: 80px;
-      padding-right: 80px;
-    }
-  }
+/* Phones Section */
+#phones-section {
+  min-height: 100vh;
+  position: relative;
 }
 
-.overview {
-  font-size: 24px;
-  line-height: 1.7;
+#phones-text {
+  position: relative;
 }
 
-/* Phones section sticky text styling */
+#phones-section .col-span-6 > .w-full:last-child {
+  margin-bottom: 0 !important;
+}
+
 .phones-text {
   transition: all 0.3s ease;
 }
@@ -490,16 +507,42 @@ button:focus .button-text {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Phones section styling */
-#phones-section {
-  min-height: 100vh;
-  position: relative;
+/* ==========================================================================
+   UTILITY CLASSES
+   ========================================================================== */
+
+/* Layout Utilities */
+.u--clip { overflow: hidden; }
+.u--rel { position: relative; z-index: 10; }
+
+/* Hover Label Utilities */
+.hover-label, 
+.hoverContainer, 
+.hover-label-overlay {
+  will-change: transform;
+  pointer-events: none;
+  transform: translate3d(0,0,0);
+  contain: layout style paint;
 }
 
-#phones-text {
-  position: relative;
-}
-
-#phones-section .col-span-6 > .w-full:last-child {
-  margin-bottom: 0 !important;
+/* Grid Padding Utilities */
+@layer utilities {
+  .px-grid {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  
+  @media (min-width: 768px) {
+    .px-grid {
+      padding-left: 40px;
+      padding-right: 40px;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .px-grid {
+      padding-left: 80px;
+      padding-right: 80px;
+    }
+  }
 }

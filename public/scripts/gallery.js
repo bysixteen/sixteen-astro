@@ -20,6 +20,56 @@ let scrollVelocity = 0;
 let targetScrollPosition = 0;
 let currentScrollPosition = 0;
 
+// ============================================================================
+// CORE PHYSICS CONSTANTS
+// ============================================================================
+
+const PHYSICS = {
+  speedDecay: 0.85,        // How quickly velocity fades (0.8 = quick stop, 0.9 = long glide)
+  lerpFactor: 0.12,        // Position smoothing (0.05 = floaty, 0.2 = snappy)
+  velocityScale: 0.8,      // Input sensitivity (higher = more responsive)
+  maxVelocity: 8.0,        // Clamp extreme speeds
+  stopThreshold: 0.01      // When to consider motion "stopped" (increased for better hover detection)
+};
+
+// ============================================================================
+// ENHANCED SCROLL STATE
+// ============================================================================
+
+// Add these new variables to your existing globals (put near the top with other scroll vars)
+let virtualVelocity = 0;           // The core velocity that drives everything
+let targetPosition = 0;            // Where we're smoothly moving toward
+let lastFrameTime = 0;             // For frame-rate independence
+
+// ============================================================================
+// TOUCH/DRAG STATE MANAGEMENT
+// ============================================================================
+
+// Add these new variables with your other globals
+let isDragging = false;
+let dragStartX = 0;
+let dragLastX = 0;
+let dragLastTime = 0;
+let dragVelocityBuffer = []; // Track recent movements for momentum calculation
+let lastScrollStopTime = 0; // Track when scrolling stopped for hover resume
+
+// ============================================================================
+// MAGNETIC SNAP CONSTANTS
+// ============================================================================
+
+const SNAP = {
+  enabled: true,                    // Toggle snapping on/off
+  threshold: 0.15,                  // When velocity drops below this, start snapping
+  strength: 0.08,                   // How aggressively it snaps (0.05 = gentle, 0.15 = firm)
+  detectionRange: 2.0,              // How close to consider a card "snappable"
+  minSettleTime: 300                // Minimum time (ms) before snapping kicks in
+};
+
+// Add these new variables with your other globals
+let snapTarget = null;              // Which card we're snapping to
+let snapStartTime = 0;              // When snapping motion began
+let lastSnapCheckTime = 0;          // Prevents excessive snap calculations
+
 // Mouse and interaction state
 let mousePosition = {
   x: 0,
@@ -62,6 +112,105 @@ const textureCache = new Map();
 
 // Loader progress globals
 let totalTexturesToLoad = 0;
+
+// ============================================================================
+// DRAG VELOCITY CALCULATOR
+// ============================================================================
+
+function calculateDragVelocity() {
+  // Use recent movement history to calculate smooth velocity
+  if (dragVelocityBuffer.length < 2) return 0;
+  
+  // Get the last few samples (within 100ms)
+  const now = performance.now();
+  const recentSamples = dragVelocityBuffer.filter(sample => now - sample.time < 100);
+  
+  if (recentSamples.length < 2) return 0;
+  
+  // Calculate average velocity from recent samples
+  let totalDelta = 0;
+  let totalTime = 0;
+  
+  for (let i = 1; i < recentSamples.length; i++) {
+    const timeDelta = recentSamples[i].time - recentSamples[i-1].time;
+    const positionDelta = recentSamples[i].x - recentSamples[i-1].x;
+    
+    if (timeDelta > 0) {
+      totalDelta += positionDelta;
+      totalTime += timeDelta;
+    }
+  }
+  
+  if (totalTime === 0) return 0;
+  
+  // Convert to velocity in world units per second
+  const pixelsPerSecond = (totalDelta / totalTime) * 1000;
+  const worldUnitsPerSecond = pixelsToWorldUnits(pixelsPerSecond);
+  
+  // Return the velocity with proper direction (inverted for natural scrolling)
+  // When dragging left to right (positive delta), we want positive velocity (gallery continues left to right)
+  // When dragging right to left (negative delta), we want negative velocity (gallery continues right to left)
+  const finalVelocity = -worldUnitsPerSecond;
+  
+  // Debug logging
+  console.log("🎯 Momentum calculation:", {
+    totalDelta: totalDelta.toFixed(2),
+    direction: totalDelta > 0 ? "left-to-right" : "right-to-left",
+    pixelsPerSecond: pixelsPerSecond.toFixed(2),
+    finalVelocity: finalVelocity.toFixed(2)
+  });
+  
+  return finalVelocity;
+}
+
+function pixelsToWorldUnits(pixels) {
+  // Convert pixel movement to world units using your existing camera setup
+  if (!camera) return pixels * 0.01; // Fallback if camera not ready
+  
+  const viewportHeightUnits = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const viewportWidthUnits = viewportHeightUnits * camera.aspect;
+  const unitsPerPixel = viewportWidthUnits / window.innerWidth;
+  return pixels * unitsPerPixel;
+}
+
+// ============================================================================
+// SNAP TARGET DETECTION
+// ============================================================================
+
+function findNearestSnapTarget() {
+  if (!projectCards || projectCards.length === 0) return null;
+  
+  let nearest = null;
+  let minDistance = Infinity;
+  
+  // Find the card closest to screen center
+  const screenCenterX = 0; // World coordinate for screen center
+  
+  for (const card of projectCards) {
+    if (!card.userData || typeof card.userData.baseX !== 'number') continue;
+    
+    // Calculate where this card currently is
+    const cardWorldX = card.userData.baseX + currentScrollPosition;
+    const distanceFromCenter = Math.abs(cardWorldX - screenCenterX);
+    
+    if (distanceFromCenter < minDistance && distanceFromCenter < SNAP.detectionRange) {
+      minDistance = distanceFromCenter;
+      nearest = card;
+    }
+  }
+  
+  return nearest;
+}
+
+function calculateSnapTargetPosition(card) {
+  if (!card || !card.userData) return currentScrollPosition;
+  
+  // Calculate the position that would center this card
+  const cardBaseX = card.userData.baseX;
+  const targetScrollPosition = -cardBaseX; // Negative because we're moving the world, not the camera
+  
+  return targetScrollPosition;
+}
 
 // ============================================================================
 // PERFORMANCE OPTIMIZATION UTILITIES
@@ -411,7 +560,7 @@ function initThreeScene() {
   
   // Scene setup
   scene = new THREE.Scene();
-	// scene.background = new THREE.Color(0x0a0a0a); // Add background color for visibility
+	scene.background = null; // Ensure transparent background
 
   // Camera with proper FOV and positioning
   camera = new THREE.PerspectiveCamera(
@@ -500,8 +649,8 @@ function startGallery() {
   extractProjectData();
   initThreeScene();
   createGallery();
-  setupControls();
-  startRenderLoop();
+  setupControlsEnhancedWithDrag();
+  startRenderLoopEnhancedWithSnap();
   createHoverTitle();
   window.portfolioGalleryInitialized = true;
 }
@@ -986,53 +1135,199 @@ if (typeof gsap !== "undefined" && typeof THREE !== "undefined") {
 /**
  * Setup controls for scrolling & interactions
  */
-function setupControls() {
-  // Get Keyboard UI elements
-	leftNavigationArrow = document.getElementById("key-arrow-left");
-	rightNavigationArrow = document.getElementById("key-arrow-right");
+// ============================================================================
+// ENHANCED CONTROLS WITH DRAG SUPPORT
+// ============================================================================
 
-  // Mouse tracking for effects
+function setupControlsEnhancedWithDrag() {
+  // Keep all existing handlers from Chunk 1
+  leftNavigationArrow = document.getElementById("key-arrow-left");
+  rightNavigationArrow = document.getElementById("key-arrow-right");
+
+  // Mouse tracking (existing)
   const mouseMoveHandler = (event) => {
     if (!hasMouseMoved) hasMouseMoved = true;
-		mousePosition.x = event.clientX;
-		mousePosition.y = event.clientY;
-		mousePosition.normalized.x = (event.clientX / window.innerWidth) * 2 - 1;
-		mousePosition.normalized.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    // Update raycaster
-		mouseVector.x = mousePosition.normalized.x;
-		mouseVector.y = mousePosition.normalized.y;
+    mousePosition.x = event.clientX;
+    mousePosition.y = event.clientY;
+    mousePosition.normalized.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mousePosition.normalized.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    mouseVector.x = mousePosition.normalized.x;
+    mouseVector.y = mousePosition.normalized.y;
     mouseMovedSinceLastFrame = true;
+
+    // NEW: Handle drag movement
+    if (isDragging) {
+      const currentTime = performance.now();
+      const deltaX = event.clientX - dragLastX;
+      
+      // Add to velocity buffer for momentum calculation
+      dragVelocityBuffer.push({
+        x: event.clientX,
+        time: currentTime,
+        delta: deltaX
+      });
+      
+      // Keep buffer size manageable (last 10 samples)
+      if (dragVelocityBuffer.length > 10) {
+        dragVelocityBuffer.shift();
+      }
+      
+      // Apply immediate drag movement to virtual velocity (inverted for natural scrolling)
+      const worldDelta = pixelsToWorldUnits(deltaX);
+      virtualVelocity -= worldDelta * 0.3; // Inverted: drag left = gallery moves right (shows cards to left)
+      
+      dragLastX = event.clientX;
+      dragLastTime = currentTime;
+      
+      // Change cursor to indicate dragging
+      document.body.style.cursor = 'grabbing';
+    }
   };
   window.addEventListener("mousemove", mouseMoveHandler);
   eventHandlers.push(["mousemove", mouseMoveHandler]);
 
-  // Re-enable wheel scrolling for desktop
+  // NEW: Mouse drag start
+  const mouseDownHandler = (event) => {
+    // Only start dragging if we're not over a clickable element
+    const intersects = raycaster.intersectObjects(allProjectCards);
+    if (intersects.length > 0) {
+      isDragging = true;
+      dragStartX = event.clientX;
+      dragLastX = event.clientX;
+      dragLastTime = performance.now();
+      dragVelocityBuffer = [{
+        x: event.clientX,
+        time: dragLastTime,
+        delta: 0
+      }];
+      
+      document.body.style.cursor = 'grabbing';
+      event.preventDefault(); // Prevent text selection
+    }
+  };
+  window.addEventListener("mousedown", mouseDownHandler);
+  eventHandlers.push(["mousedown", mouseDownHandler]);
+
+  // NEW: Mouse drag end
+  const mouseUpHandler = (event) => {
+    if (isDragging) {
+      // Calculate final momentum from drag gesture
+      const momentum = calculateDragVelocity();
+      virtualVelocity += momentum * 0.8; // Apply momentum with scaling (direction handled in calculateDragVelocity)
+      
+      // Clamp velocity
+      virtualVelocity = Math.max(-PHYSICS.maxVelocity, Math.min(PHYSICS.maxVelocity, virtualVelocity));
+      
+      isDragging = false;
+      dragVelocityBuffer = [];
+      document.body.style.cursor = 'default';
+      
+      // Force hover state update after a short delay to ensure it resumes
+      setTimeout(() => {
+        // Reset hover state to force fresh detection
+        hoveredProjectIndex = -1;
+        hoveredProjectMesh = null;
+        updateHoverStates();
+      }, 50);
+    }
+  };
+  window.addEventListener("mouseup", mouseUpHandler);
+  eventHandlers.push(["mouseup", mouseUpHandler]);
+
+  // Enhanced wheel (from Chunk 1)
   const wheelHandler = (event) => {
     event.preventDefault();
-    // Dynamic scroll: accelerate for faster wheel events
-    const base = CONFIG.scrollSensitivity;
-    const acceleration = 0.01; // tweak for how much extra per fast scroll
-    const dynamicFactor = 1 + acceleration * Math.abs(event.deltaY);
-    const delta = event.deltaY * base * dynamicFactor;
-    scrollVelocity += delta;
-    scrollVelocity = Math.max(
-      -CONFIG.maxVelocity,
-      Math.min(CONFIG.maxVelocity, scrollVelocity),
-    );
+    const delta = event.deltaY * PHYSICS.velocityScale * 0.01;
+    virtualVelocity += delta;
+    virtualVelocity = Math.max(-PHYSICS.maxVelocity, Math.min(PHYSICS.maxVelocity, virtualVelocity));
   };
   window.addEventListener("wheel", wheelHandler, { passive: false });
   eventHandlers.push(["wheel", wheelHandler]);
 
-  // Click handling
+  // NEW: Touch support
+  const touchStartHandler = (event) => {
+    const touch = event.touches[0];
+    isDragging = true;
+    dragStartX = touch.clientX;
+    dragLastX = touch.clientX;
+    dragLastTime = performance.now();
+    dragVelocityBuffer = [{
+      x: touch.clientX,
+      time: dragLastTime,
+      delta: 0
+    }];
+    
+    event.preventDefault();
+  };
+  window.addEventListener("touchstart", touchStartHandler, { passive: false });
+  eventHandlers.push(["touchstart", touchStartHandler]);
+
+  const touchMoveHandler = (event) => {
+    if (!isDragging) return;
+    
+    const touch = event.touches[0];
+    const currentTime = performance.now();
+    const deltaX = touch.clientX - dragLastX;
+    
+    // Add to velocity buffer
+    dragVelocityBuffer.push({
+      x: touch.clientX,
+      time: currentTime,
+      delta: deltaX
+    });
+    
+    if (dragVelocityBuffer.length > 10) {
+      dragVelocityBuffer.shift();
+    }
+    
+          // Apply touch movement (inverted for natural scrolling)
+      const worldDelta = pixelsToWorldUnits(deltaX);
+      virtualVelocity -= worldDelta * 0.4; // Inverted: swipe left = gallery moves right (shows cards to left)
+    
+    dragLastX = touch.clientX;
+    dragLastTime = currentTime;
+    
+    event.preventDefault();
+  };
+  window.addEventListener("touchmove", touchMoveHandler, { passive: false });
+  eventHandlers.push(["touchmove", touchMoveHandler]);
+
+  const touchEndHandler = (event) => {
+    if (isDragging) {
+      // Apply touch momentum
+      const momentum = calculateDragVelocity();
+      virtualVelocity += momentum * 1.2; // Touch gets slightly more momentum (direction handled in calculateDragVelocity)
+      
+      virtualVelocity = Math.max(-PHYSICS.maxVelocity, Math.min(PHYSICS.maxVelocity, virtualVelocity));
+      
+      isDragging = false;
+      dragVelocityBuffer = [];
+      
+      // Force hover state update after a short delay to ensure it resumes
+      setTimeout(() => {
+        // Reset hover state to force fresh detection
+        hoveredProjectIndex = -1;
+        hoveredProjectMesh = null;
+        updateHoverStates();
+      }, 50);
+    }
+  };
+  window.addEventListener("touchend", touchEndHandler);
+  eventHandlers.push(["touchend", touchEndHandler]);
+
+  // Enhanced click handling - prevent clicks during drag
   const clickHandler = (event) => {
+    // Ignore clicks if we just finished dragging
+    if (Math.abs(event.clientX - dragStartX) > 10) {
+      return; // This was a drag, not a click
+    }
+    
     updateHoverStates();
-    // Find clicked project
     const intersects = raycaster.intersectObjects(allProjectCards);
     if (intersects.length > 0) {
       const project = intersects[0].object;
       const url = project.userData.projectInfo.url;
       if (url) {
-        // Dispatch custom event for animated page transition
         window.dispatchEvent(new CustomEvent("project:navigate", { detail: { url } }));
         return;
       }
@@ -1041,20 +1336,18 @@ function setupControls() {
   window.addEventListener("click", clickHandler);
   eventHandlers.push(["click", clickHandler]);
 
-  // Keyboard controls
+  // Keyboard navigation (from Chunk 1)
   const keydownHandler = (event) => {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
-      navigateLeft();
-			if (leftNavigationArrow)
-				leftNavigationArrow.classList.add("navigation-controls__arrow--active");
+      virtualVelocity -= 0.5;
+      if (leftNavigationArrow)
+        leftNavigationArrow.classList.add("navigation-controls__arrow--active");
     } else if (event.key === "ArrowRight") {
       event.preventDefault();
-      navigateRight();
-			if (rightNavigationArrow)
-				rightNavigationArrow.classList.add(
-					"navigation-controls__arrow--active",
-				);
+      virtualVelocity += 0.5;
+      if (rightNavigationArrow)
+        rightNavigationArrow.classList.add("navigation-controls__arrow--active");
     }
   };
   window.addEventListener("keydown", keydownHandler);
@@ -1062,60 +1355,61 @@ function setupControls() {
 
   const keyupHandler = (event) => {
     if (event.key === "ArrowLeft") {
-			if (leftNavigationArrow)
-				leftNavigationArrow.classList.remove(
-					"navigation-controls__arrow--active",
-				);
+      if (leftNavigationArrow)
+        leftNavigationArrow.classList.remove("navigation-controls__arrow--active");
     } else if (event.key === "ArrowRight") {
-			if (rightNavigationArrow)
-				rightNavigationArrow.classList.remove(
-					"navigation-controls__arrow--active",
-				);
+      if (rightNavigationArrow)
+        rightNavigationArrow.classList.remove("navigation-controls__arrow--active");
     }
   };
   window.addEventListener("keyup", keyupHandler);
   eventHandlers.push(["keyup", keyupHandler]);
 
-  // Click controls for arrows
-	if (leftNavigationArrow) {
-		const leftClick = () => navigateLeft();
-		const leftDown = () => leftNavigationArrow.classList.add("navigation-controls__arrow--active");
-		const leftUp = () => leftNavigationArrow.classList.remove("navigation-controls__arrow--active");
-		const leftLeave = () => leftNavigationArrow.classList.remove("navigation-controls__arrow--active");
-		leftNavigationArrow.addEventListener("click", leftClick);
-		eventHandlers.push(["click", leftClick, leftNavigationArrow]);
-		leftNavigationArrow.addEventListener("mousedown", leftDown);
-		eventHandlers.push(["mousedown", leftDown, leftNavigationArrow]);
-		leftNavigationArrow.addEventListener("mouseup", leftUp);
-		eventHandlers.push(["mouseup", leftUp, leftNavigationArrow]);
-		leftNavigationArrow.addEventListener("mouseleave", leftLeave);
-		eventHandlers.push(["mouseleave", leftLeave, leftNavigationArrow]);
+  // Arrow clicks (from Chunk 1)
+  if (leftNavigationArrow) {
+    const leftClick = () => { virtualVelocity -= 0.8; };
+    const leftDown = () => leftNavigationArrow.classList.add("navigation-controls__arrow--active");
+    const leftUp = () => leftNavigationArrow.classList.remove("navigation-controls__arrow--active");
+    const leftLeave = () => leftNavigationArrow.classList.remove("navigation-controls__arrow--active");
+    leftNavigationArrow.addEventListener("click", leftClick);
+    leftNavigationArrow.addEventListener("mousedown", leftDown);
+    leftNavigationArrow.addEventListener("mouseup", leftUp);
+    leftNavigationArrow.addEventListener("mouseleave", leftLeave);
+    eventHandlers.push(["click", leftClick, leftNavigationArrow]);
+    eventHandlers.push(["mousedown", leftDown, leftNavigationArrow]);
+    eventHandlers.push(["mouseup", leftUp, leftNavigationArrow]);
+    eventHandlers.push(["mouseleave", leftLeave, leftNavigationArrow]);
   }
 
-	if (rightNavigationArrow) {
-		const rightClick = () => navigateRight();
-		const rightDown = () => rightNavigationArrow.classList.add("navigation-controls__arrow--active");
-		const rightUp = () => rightNavigationArrow.classList.remove("navigation-controls__arrow--active");
-		const rightLeave = () => rightNavigationArrow.classList.remove("navigation-controls__arrow--active");
-		rightNavigationArrow.addEventListener("click", rightClick);
-		eventHandlers.push(["click", rightClick, rightNavigationArrow]);
-		rightNavigationArrow.addEventListener("mousedown", rightDown);
-		eventHandlers.push(["mousedown", rightDown, rightNavigationArrow]);
-		rightNavigationArrow.addEventListener("mouseup", rightUp);
-		eventHandlers.push(["mouseup", rightUp, rightNavigationArrow]);
-		rightNavigationArrow.addEventListener("mouseleave", rightLeave);
-		eventHandlers.push(["mouseleave", rightLeave, rightNavigationArrow]);
+  if (rightNavigationArrow) {
+    const rightClick = () => { virtualVelocity += 0.8; };
+    const rightDown = () => rightNavigationArrow.classList.add("navigation-controls__arrow--active");
+    const rightUp = () => rightNavigationArrow.classList.remove("navigation-controls__arrow--active");
+    const rightLeave = () => rightNavigationArrow.classList.remove("navigation-controls__arrow--active");
+    rightNavigationArrow.addEventListener("click", rightClick);
+    rightNavigationArrow.addEventListener("mousedown", rightDown);
+    rightNavigationArrow.addEventListener("mouseup", rightUp);
+    rightNavigationArrow.addEventListener("mouseleave", rightLeave);
+    eventHandlers.push(["click", rightClick, rightNavigationArrow]);
+    eventHandlers.push(["mousedown", rightDown, rightNavigationArrow]);
+    eventHandlers.push(["mouseup", rightUp, rightNavigationArrow]);
+    eventHandlers.push(["mouseleave", rightLeave, rightNavigationArrow]);
   }
 
-  // Resize handling
+  // Resize (existing)
   const resizeHandler = () => {
-		if (!isSceneInitialized) return;
+    if (!isSceneInitialized) return;
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   };
   window.addEventListener("resize", resizeHandler);
   eventHandlers.push(["resize", resizeHandler]);
+
+  // Initialize positions
+  if (projectCards.length > 0) {
+    targetPosition = currentScrollPosition = projectCards[0].userData.baseX;
+  }
 }
 
 // Remove all event listeners registered in eventHandlers
@@ -1130,6 +1424,9 @@ function removeAllEventListeners() {
  * Update hover states using raycaster
  */
 function updateHoverStates() {
+  // Debug: Log when function is called
+  console.log("🔄 updateHoverStates called, isDragging:", isDragging, "virtualVelocity:", virtualVelocity);
+  
   // Throttle ray-casting to avoid CPU spikes
   const RAYCAST_INTERVAL = 3; // cast once every 3 RAF frames
   updateHoverStates._counter = (updateHoverStates._counter || 0) + 1;
@@ -1145,20 +1442,23 @@ function updateHoverStates() {
   )
     return;
 
-	// --- NEW: Remove hover state if gallery is scrolling ---
-	if (Math.abs(scrollVelocity) > 0.0001) {
+	// --- SIMPLIFIED: Only block hover during active dragging ---
+	if (isDragging) {
 		hoveredProjectIndex = -1;
 		hoveredProjectMesh = null;
 		if (hoverLabelContainer) hoverLabelContainer.style.display = "none";
-		document.body.style.cursor = "default";
+		document.body.style.cursor = "grabbing";
 		return;
 	}
-	// --- END NEW ---
+	// --- END SIMPLIFIED ---
 
   raycaster.setFromCamera(mouseVector, camera);
 	const intersects = raycaster.intersectObjects(allProjectCards);
 
-  if (intersects.length > 0) {
+    if (intersects.length > 0) {
+    // Debug logging
+    console.log("🎯 Hover detected:", intersects[0].object.userData.projectInfo?.title);
+    
     const intersected = intersects[0].object;
     const newIndex = intersected.userData.index;
 		const meshChanged = intersected !== hoveredProjectMesh;
@@ -1313,130 +1613,135 @@ function updateHoverStates() {
 /**
  * startRenderLoop() – master RAF with performance optimizations
  */
-function startRenderLoop() {
-  function animate() {
+// ============================================================================
+// ENHANCED RENDER LOOP WITH MAGNETIC SNAPPING
+// ============================================================================
+
+function startRenderLoopEnhancedWithSnap() {
+  function animate(currentTime) {
     frameCounter++;
 
-    // Render as soon as scene is initialised and primary assets are ready – no mouse-movement required
-		if (
-			!isSceneInitialized ||
-			!isGalleryFullyLoaded ||
-			allProjectCards.length === 0
-		) {
-			// Still render the scene even if gallery isn't fully loaded to show background
-			if (isSceneInitialized && scene && camera && renderer) {
-				renderer.render(scene, camera);
-			}
-    return;
-		}
-
-    const now = performance.now();
-		if (lastFrameTimestamp === 0) {
-			lastFrameTimestamp = now;
+    if (!isSceneInitialized || !isGalleryFullyLoaded || allProjectCards.length === 0) {
+      if (isSceneInitialized && scene && camera && renderer) {
+        renderer.render(scene, camera);
+      }
+      requestAnimationFrame(animate);
+      return;
     }
-		const deltaTime = now - lastFrameTimestamp;
-		lastFrameTimestamp = now;
-    const deltaSec = deltaTime * 0.001;
 
-    // Performance monitoring and adaptive frame skipping
-		if (now - lastPerformanceCheckTimestamp > 1000) {
-			// Check every second
-      const targetFrameTime = 16.67; // 60fps target
-      isPerformanceModeActive = deltaTime > targetFrameTime * 1.5; // If frame time > 25ms
-			lastPerformanceCheckTimestamp = now;
+    // Frame rate independence (from Chunk 1)
+    if (lastFrameTime === 0) lastFrameTime = currentTime;
+    const deltaTime = (currentTime - lastFrameTime) * 0.001;
+    lastFrameTime = currentTime;
+    const clampedDelta = Math.min(deltaTime, 1/30);
+
+    // CORE PHYSICS (from Chunk 1)
+    if (!isIntroAnimationActive) {
+      virtualVelocity *= Math.pow(PHYSICS.speedDecay, clampedDelta * 60);
+      targetPosition += virtualVelocity * clampedDelta * 60;
+      
+      // Track when scrolling stopped for hover resume
+      if (Math.abs(virtualVelocity) < PHYSICS.stopThreshold) {
+        virtualVelocity = 0;
+        if (lastScrollStopTime === 0) {
+          lastScrollStopTime = performance.now();
+        }
+      } else {
+        lastScrollStopTime = 0;
+      }
+    }
+    
+    // NEW: MAGNETIC SNAPPING LOGIC
+    const isMovingSlowly = Math.abs(virtualVelocity) < SNAP.threshold;
+    const isNotDragging = !isDragging; // From Chunk 2
+    const enoughTimeHasPassed = currentTime - lastSnapCheckTime > 100; // Don't check every frame
+    
+    if (SNAP.enabled && isMovingSlowly && isNotDragging && enoughTimeHasPassed) {
+      lastSnapCheckTime = currentTime;
+      
+      // Find what we should snap to
+      const nearestCard = findNearestSnapTarget();
+      
+      if (nearestCard && nearestCard !== snapTarget) {
+        // New snap target found
+        snapTarget = nearestCard;
+        snapStartTime = currentTime;
+        
+        console.log(`🧲 Snapping to card: ${nearestCard.userData.projectInfo?.title || 'Unknown'}`);
+      }
+      
+      // Apply snap force
+      if (snapTarget) {
+        const idealPosition = calculateSnapTargetPosition(snapTarget);
+        const snapDistance = idealPosition - targetPosition;
+        
+        // Apply magnetic force (stronger when closer)
+        const snapForce = snapDistance * SNAP.strength;
+        targetPosition += snapForce * clampedDelta * 60;
+        
+        // If we're very close, consider snapping complete
+        if (Math.abs(snapDistance) < 0.01) {
+          targetPosition = idealPosition;
+          snapTarget = null;
+          virtualVelocity = 0;
+        }
+      }
+    } else if (Math.abs(virtualVelocity) > SNAP.threshold * 2) {
+      // Moving too fast, cancel any active snap
+      snapTarget = null;
+    }
+
+    // Smooth lerp current position toward target (from Chunk 1)
+    const lerpAmount = 1 - Math.pow(1 - PHYSICS.lerpFactor, clampedDelta * 60);
+    currentScrollPosition += (targetPosition - currentScrollPosition) * lerpAmount;
+    
+    // Stop micro-movements
+    if (Math.abs(virtualVelocity) < PHYSICS.stopThreshold && !snapTarget) {
+      virtualVelocity = 0;
+    }
+
+    // Update scrollVelocity for existing shader effects
+    scrollVelocity = virtualVelocity;
+
+    // Performance monitoring (keep existing)
+    const now = performance.now();
+    if (now - lastPerformanceCheckTimestamp > 1000) {
+      const targetFrameTime = 16.67;
+      isPerformanceModeActive = (currentTime - lastFrameTime) > targetFrameTime * 1.5;
+      lastPerformanceCheckTimestamp = now;
     }
 
     const elapsedTime = clock.getElapsedTime();
 
-    // Prevent extreme velocities
-		const maxVelocity = CONFIG.maxVelocity * (isGalleryFullyLoaded ? 1 : 0.5);
-		scrollVelocity = Math.max(
-			-maxVelocity,
-			Math.min(maxVelocity, scrollVelocity),
-		);
-
-    // Update positions with interpolation
-		targetScrollPosition += scrollVelocity * deltaSec * 60;
-
-    // Smooth friction application
-    scrollVelocity *= Math.pow(CONFIG.friction, deltaSec * 60);
-
-    // Check if a keyboard-initiated snap has completed
-		if (
-			isKeyboardNavigationActive &&
-			Math.abs(currentScrollPosition - targetScrollPosition) < 0.001
-		) {
-			isKeyboardNavigationActive = false;
-			currentScrollPosition = targetScrollPosition; // Final snap for precision
-    }
-
-    // Gentler stopping & snapping (for mouse/touch scroll)
-		if (Math.abs(scrollVelocity) < 0.0001 && !isKeyboardNavigationActive) {
-      scrollVelocity = 0;
-			const nearestCard = findNearestCard(currentScrollPosition);
-      if (nearestCard) {
-				targetScrollPosition =
-					nearestCard.userData.baseX + nearestCard.userData.offset;
-      }
-    }
-
-    // Handle infinite scroll - skip during heavy animations
-		if (!isHeavyAnimationActive) {
+    // Handle infinite scroll (keep existing)
+    if (!isHeavyAnimationActive) {
       handleInfiniteScroll();
     }
 
-		// Smooth currentScrollPosition with damp
-    // 5: Damping coefficient for MathUtils.damp; higher = snappier, lower = floatier. Tuned for premium feel.
-		currentScrollPosition = THREE.MathUtils.damp(
-			currentScrollPosition,
-			targetScrollPosition,
-			5,
-			deltaSec,
-		);
-		// Clamp to avoid sub-pixel drift
-		currentScrollPosition = clampToEpsilon(
-			currentScrollPosition,
-			targetScrollPosition,
-		);
-
-    // Throttle expensive operations based on performance mode
-		const updateInterval =
-			isPerformanceModeActive || isHeavyAnimationActive ? 3 : 1;
-		const galleryMoving =
-			Math.abs(scrollVelocity) > 0.0001 || isKeyboardNavigationActive;
+    // Update interactions (keep existing logic)
+    const updateInterval = isPerformanceModeActive || isHeavyAnimationActive ? 3 : 1;
+    const galleryMoving = Math.abs(virtualVelocity) > PHYSICS.stopThreshold || snapTarget !== null;
     
-		if (
-			(mouseMovedSinceLastFrame || galleryMoving) &&
-			frameCounter % updateInterval === 0
-		) {
+    if ((mouseMovedSinceLastFrame || galleryMoving) && frameCounter % updateInterval === 0) {
       updateHoverStates();
       mouseMovedSinceLastFrame = false;
     }
 
-    // Update hover labels with adaptive frequency
-		const hoverUpdateInterval =
-			isPerformanceModeActive || isHeavyAnimationActive
-				? 4
-				: 2;
-		if (
-			hoveredProjectMesh &&
-			hoverLabelContainer &&
-			frameCounter % hoverUpdateInterval === 0
-		) {
-			// Only update DOM if transform changed
-			updateHoverLabelPositionOptimized();
+    // Update hover labels (keep existing)
+    const hoverUpdateInterval = isPerformanceModeActive || isHeavyAnimationActive ? 4 : 2;
+    if (hoveredProjectMesh && hoverLabelContainer && frameCounter % hoverUpdateInterval === 0) {
+      updateHoverLabelPositionOptimized();
     }
 
-    // Batch all card updates for better performance
-    updateAllCards(elapsedTime, deltaSec);
+    // Update all cards (keep existing)
+    updateAllCards(elapsedTime, clampedDelta);
 
-		// Force render with clear color
-		// renderer.setClearColor(0x0a0a0a, 1);
+    // Render
     renderer.render(scene, camera);
+    requestAnimationFrame(animate);
   }
 
-	// Use WebGLRenderer's internal timing – automatically adapts to refresh-rate and pauses in background tabs
-  renderer.setAnimationLoop(animate);
+  requestAnimationFrame(animate);
 }
 
 // Restore these constants, as they are used in the render loop and elsewhere
@@ -1457,13 +1762,12 @@ function updateAllCards(elapsedTime, deltaSec) {
 
   // Cache commonly used values
 	const mouseNormalized = mousePosition.normalized;
-  const motionBlurIntensity = Math.min(Math.abs(scrollVelocity) * 2.0, 1.0);
+  const motionBlurIntensity = Math.min(Math.abs(virtualVelocity) * 2.0, 1.0);
 
   // Add a helper to check if the gallery is moving
   function isGalleryScrolling() {
-    // Consider the gallery moving if velocity is above a small threshold
-    // 0.0001: below this, motion is visually imperceptible and considered "at rest"
-    return Math.abs(scrollVelocity) > 0.0001;
+    // Only consider actively dragging as "scrolling" for hover purposes
+    return isDragging;
   }
 
 	for (let i = 0; i < allProjectCards.length; i++) {
@@ -1479,7 +1783,7 @@ function updateAllCards(elapsedTime, deltaSec) {
 				currentScrollPosition;
       project.position.x = screenX;
     } else {
-      // During intro the card is already animating; estimate position quickly
+      // During intro the card is already animating; don't interfere with GSAP
       screenX = project.position.x;
     }
 
@@ -1527,8 +1831,8 @@ function updateAllCards(elapsedTime, deltaSec) {
         uniforms.uMouse.value.set(mouseNormalized.x, mouseNormalized.y);
       }
       
-			if (hasUniformChanged(project, "uVelocity", scrollVelocity)) {
-        uniforms.uVelocity.value = scrollVelocity;
+			if (hasUniformChanged(project, "uVelocity", virtualVelocity)) {
+        uniforms.uVelocity.value = virtualVelocity;
       }
       
 			if (
@@ -1731,6 +2035,22 @@ function playIntroAnimation(introAnimationGroup) {
     onComplete: () => {
 			isIntroAnimationActive = false;
 			isGalleryFullyLoaded = true;
+			
+			// SYNC PHYSICS SYSTEM: Ensure physics positions match the final intro positions
+			if (projectCards.length > 0) {
+				// Get the final position from the first card (which should be centered)
+				const finalCard = projectCards[0];
+				const finalPosition = finalCard.userData.baseX;
+				
+				// Reset physics system to match intro completion
+				currentScrollPosition = finalPosition;
+				targetPosition = finalPosition;
+				virtualVelocity = 0;
+				scrollVelocity = 0;
+				
+				console.log("🎯 Physics system synced to intro completion position:", finalPosition);
+			}
+			
 			allProjectCards.forEach((card) => {
         if (card.material?.uniforms?.uOpacity) {
           card.material.uniforms.uOpacity.value = 1.0;
@@ -1796,4 +2116,60 @@ function playIntroAnimation(introAnimationGroup) {
     }
   });
   return tl;
-} 
+}
+
+// ============================================================================
+// SNAP TUNING HELPERS (for easy adjustment)
+// ============================================================================
+
+// Call these from browser console to fine-tune the feel:
+window.adjustSnapStrength = (value) => {
+  SNAP.strength = value;
+  console.log(`🧲 Snap strength set to: ${value} (try 0.05-0.15)`);
+};
+
+window.adjustSnapThreshold = (value) => {
+  SNAP.threshold = value;
+  console.log(`🎯 Snap threshold set to: ${value} (try 0.1-0.3)`);
+};
+
+window.toggleSnap = () => {
+  SNAP.enabled = !SNAP.enabled;
+  console.log(`🧲 Magnetic snap: ${SNAP.enabled ? 'ON' : 'OFF'}`);
+  if (!SNAP.enabled) snapTarget = null;
+};
+
+// ============================================================================
+// INTEGRATION INSTRUCTIONS
+// ============================================================================
+
+// STEP 1: In your startGallery() function, replace:
+//   startRenderLoopEnhanced();
+// with:
+//   startRenderLoopEnhancedWithSnap();
+
+// STEP 2: Test the magnetic behavior:
+//   - Scroll/drag at normal speed - should move freely
+//   - Let it slow down naturally - should "click" to nearest card
+//   - Try gentle nudges - should snap back to centered position
+//   - Fast flicks should ignore snapping until they slow down
+
+// STEP 3: Fine-tune from browser console:
+//   adjustSnapStrength(0.1)  // Make snapping more/less aggressive
+//   adjustSnapThreshold(0.2) // Change when snapping kicks in
+//   toggleSnap()            // Turn off/on to compare
+
+console.log("✅ Chunk 1 loaded: Core Physics Foundation");
+console.log("✅ Chunk 2 loaded: Touch/Drag Support");
+console.log("✅ Chunk 3 loaded: Magnetic Snapping");
+console.log("🎯 Expected feel: Smooth wheel input with natural inertia decay");
+console.log("🎯 Expected feel: Smooth mouse drag and touch swipe with momentum");
+console.log("🧲 Expected feel: Cards gently 'click' into center when motion settles");
+console.log("📝 Next: Test wheel scrolling - it should glide and slow down smoothly");
+console.log("📱 Test on mobile: Swipe gestures should feel natural with inertia");
+console.log("🖱️  Test on desktop: Click-drag should give smooth momentum on release");
+console.log("🎯 Test: Scroll then let go - should settle on nearest card");
+console.log("⚙️  Tune with: adjustSnapStrength(0.1), adjustSnapThreshold(0.2), toggleSnap()");
+console.log("🔧 Fixed: Intro animation to physics system transition - no more jumps!");
+console.log("🔧 Fixed: Hover states now work properly after drag operations!");
+console.log("🔧 Fixed: Drag direction inverted for natural scrolling behavior!"); 
