@@ -20,12 +20,32 @@ import '../styles/main.css';
     
     async function loadWorks() {
       try {
+        console.log('=== STRAPI DEBUGGING START ===');
         console.log('Strapi URL:', STRAPI_URL);
+        console.log('Current origin:', window.location.origin);
+        console.log('User agent:', navigator.userAgent);
+        
         if (!STRAPI_URL) {
           throw new Error('Strapi URL is not configured');
         }
         
+        // Test if we can reach the Strapi base URL
+        try {
+          console.log('Testing Strapi base URL connectivity...');
+          const testResponse = await fetch(STRAPI_URL.replace('/api', ''), {
+            method: 'HEAD',
+            mode: 'cors'
+          });
+          console.log('Base URL test response:', testResponse.status);
+        } catch (testError) {
+          console.warn('Base URL test failed:', testError);
+        }
+        
         console.log('Fetching from:', STRAPI_URL + '/works?populate=*');
+        console.log('Request headers:', {
+          'Content-Type': 'application/json',
+        });
+        
         // Fetch from Strapi
         const worksRes = await fetch(STRAPI_URL + '/works?populate=*', {
           method: 'GET',
@@ -34,14 +54,32 @@ import '../styles/main.css';
           },
         });
         
+        console.log('Response status:', worksRes.status);
+        console.log('Response status text:', worksRes.statusText);
+        console.log('Response headers:', Object.fromEntries(worksRes.headers.entries()));
+        console.log('Response ok:', worksRes.ok);
+        
         if (!worksRes.ok) {
           throw new Error(`Failed to fetch from Strapi: ${worksRes.status} ${worksRes.statusText}`);
         }
         
-        const response = await worksRes.json();
-        console.log('Strapi response:', response);
+        // Try to get response text first to debug CORS issues
+        const responseText = await worksRes.text();
+        console.log('Raw response text:', responseText);
+        
+        let response;
+        try {
+          response = JSON.parse(responseText);
+          console.log('Parsed Strapi response:', response);
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', parseError);
+          console.log('Response text that failed to parse:', responseText);
+          throw new Error('Invalid JSON response from Strapi');
+        }
+        
         const works = response.data || [];
         console.log('Works data:', works);
+        console.log('Number of works found:', works.length);
         
         // Populate project data
         const projectData = document.getElementById('project-data');
@@ -76,9 +114,16 @@ import '../styles/main.css';
           // Set global flag and dispatch custom event
           window.projectDataReady = true;
           window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: works.length } }));
+          console.log('=== STRAPI DEBUGGING COMPLETE - SUCCESS ===');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading works from Strapi:', error);
+        console.error('Error details:', {
+          name: error?.name,
+          message: error?.message,
+          stack: error?.stack
+        });
+        console.log('Falling back to sample data...');
         // Fallback to sample data if Strapi is unavailable
         const projectData = document.getElementById('project-data');
         if (projectData) {
@@ -123,10 +168,12 @@ import '../styles/main.css';
           // Set global flag and dispatch custom event
           window.projectDataReady = true;
           window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: fallbackWorks.length } }));
+          console.log('=== STRAPI DEBUGGING COMPLETE - FALLBACK DATA USED ===');
         } else {
           // Set global flag even on error to prevent hanging
           window.projectDataReady = true;
           window.dispatchEvent(new CustomEvent('projectData:ready', { detail: { count: 0 } }));
+          console.log('=== STRAPI DEBUGGING COMPLETE - NO DATA AVAILABLE ===');
         }
       }
     }
