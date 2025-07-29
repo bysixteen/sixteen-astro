@@ -545,6 +545,58 @@ function extractProjectData() {
 }
 
 /**
+ * calculateCardDimensions()
+ * -------------------------
+ * Calculates card dimensions in world units based on current viewport size
+ * and applies height constraints. This function can be called on resize.
+ *
+ * @returns {void}
+ */
+function calculateCardDimensions() {
+  const viewportHeightUnits =
+    2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const viewportWidthUnits = viewportHeightUnits * camera.aspect;
+  const unitsPerPixel = viewportWidthUnits / window.innerWidth;
+
+  // Calculate card dimensions with height constraint
+  const calculatedWidth = CONFIG.desiredPixelWidth * unitsPerPixel;
+  const calculatedHeight = calculatedWidth / 1.5; // 3:2 aspect ratio
+  const maxHeight = CONFIG.desiredPixelHeight * unitsPerPixel;
+  
+  // Use the smaller of calculated height or max height
+  CONFIG.cardWidth = calculatedWidth;
+  CONFIG.cardHeight = Math.min(calculatedHeight, maxHeight);
+  
+  // Adjust width to maintain aspect ratio if height was constrained
+  if (CONFIG.cardHeight === maxHeight) {
+    CONFIG.cardWidth = maxHeight * 1.5; // Maintain 3:2 aspect ratio
+  }
+  
+  // Debug logging for card dimensions
+  console.log('Card dimensions:', {
+    calculatedWidth: calculatedWidth / unitsPerPixel + 'px',
+    calculatedHeight: calculatedHeight / unitsPerPixel + 'px',
+    maxHeight: maxHeight / unitsPerPixel + 'px',
+    finalWidth: CONFIG.cardWidth / unitsPerPixel + 'px',
+    finalHeight: CONFIG.cardHeight / unitsPerPixel + 'px',
+    viewportWidth: window.innerWidth + 'px',
+    viewportHeight: window.innerHeight + 'px'
+  });
+
+  // Gap equal to the desired pixel gap converted to world units (e.g. 24 px)
+  const gapUnits = CONFIG.desiredPixelGap * unitsPerPixel;
+  // Store viewport width for later "off-screen" calculations
+  CONFIG.viewportWidthUnits = viewportWidthUnits;
+  CONFIG.cardSpacing = CONFIG.cardWidth + gapUnits;
+
+  // Any card whose center is further than this from viewport centre will be ignored in the RAF update loop
+  offscreenThreshold = viewportWidthUnits * 0.7 + CONFIG.cardWidth * 2;
+
+  // Corner radius in UV space (8px on the 400-px texture width)
+  CONFIG.cornerRadiusUV = 8 / CONFIG.desiredPixelWidth;
+}
+
+/**
  * initThreeScene()
  * ----------------
  * Sets up the Three.js renderer, camera, lights and converts the desired
@@ -578,46 +630,7 @@ function initThreeScene() {
   // ---------------------------------------------------------
   // Calculate card dimensions in world units to equal ~400px
   // ---------------------------------------------------------
-  const viewportHeightUnits =
-    2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const viewportWidthUnits = viewportHeightUnits * camera.aspect;
-  const unitsPerPixel = viewportWidthUnits / window.innerWidth;
-
-  // Calculate card dimensions with height constraint
-  const calculatedWidth = CONFIG.desiredPixelWidth * unitsPerPixel;
-  const calculatedHeight = calculatedWidth / 1.5; // 3:2 aspect ratio
-  const maxHeight = CONFIG.desiredPixelHeight * unitsPerPixel;
-  
-  // Use the smaller of calculated height or max height
-  CONFIG.cardWidth = calculatedWidth;
-  CONFIG.cardHeight = Math.min(calculatedHeight, maxHeight);
-  
-  // Adjust width to maintain aspect ratio if height was constrained
-  if (CONFIG.cardHeight === maxHeight) {
-    CONFIG.cardWidth = maxHeight * 1.5; // Maintain 3:2 aspect ratio
-  }
-  
-  // Debug logging for card dimensions
-  console.log('Card dimensions:', {
-    calculatedWidth: calculatedWidth / unitsPerPixel + 'px',
-    calculatedHeight: calculatedHeight / unitsPerPixel + 'px',
-    maxHeight: maxHeight / unitsPerPixel + 'px',
-    finalWidth: CONFIG.cardWidth / unitsPerPixel + 'px',
-    finalHeight: CONFIG.cardHeight / unitsPerPixel + 'px',
-    viewportWidth: window.innerWidth + 'px',
-    viewportHeight: window.innerHeight + 'px'
-  });
-  // Gap equal to the desired pixel gap converted to world units (e.g. 24 px)
-  const gapUnits = CONFIG.desiredPixelGap * unitsPerPixel;
-  // Store viewport width for later "off-screen" calculations
-  CONFIG.viewportWidthUnits = viewportWidthUnits;
-  CONFIG.cardSpacing = CONFIG.cardWidth + gapUnits;
-
-  // Any card whose center is further than this from viewport centre will be ignored in the RAF update loop
-	offscreenThreshold = viewportWidthUnits * 0.7 + CONFIG.cardWidth * 2;
-
-  // Corner radius in UV space (8px on the 400-px texture width)
-  CONFIG.cornerRadiusUV = 8 / CONFIG.desiredPixelWidth;
+  calculateCardDimensions();
 
   // High-quality renderer
   renderer = new THREE.WebGLRenderer({
@@ -1418,9 +1431,11 @@ function setupControlsEnhancedWithDrag() {
     eventHandlers.push(["mouseleave", rightLeave, rightNavigationArrow]);
   }
 
-  // Resize (existing)
+  // Resize handler with card dimension recalculation
   const resizeHandler = () => {
     if (!isSceneInitialized) return;
+    
+    // Update camera and renderer only - keep cards at initial size
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
