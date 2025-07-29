@@ -454,7 +454,8 @@ const CONFIG = {
   cardWidth: 6.0,
   cardHeight: 4.0, // Taller aspect ratio
   cardSpacing: 1, // More spacing for visual impact
-  desiredPixelWidth: 640, // Desired on-screen width of each card in pixels (480×320)
+  desiredPixelWidth: 640, // Desired on-screen width of each card in pixels
+  desiredPixelHeight: 320, // Maximum height of each card in pixels
   desiredPixelGap: 24,
   // Desired gap between cards in pixels
 
@@ -575,9 +576,48 @@ function initThreeScene() {
   // Further back for larger cards
 
   // ---------------------------------------------------------
-  // Calculate initial card dimensions with responsive sizing
+  // Calculate card dimensions in world units to equal ~400px
   // ---------------------------------------------------------
-  updateCardDimensions();
+  const viewportHeightUnits =
+    2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const viewportWidthUnits = viewportHeightUnits * camera.aspect;
+  const unitsPerPixel = viewportWidthUnits / window.innerWidth;
+
+  // Calculate card dimensions with height constraint
+  const calculatedWidth = CONFIG.desiredPixelWidth * unitsPerPixel;
+  const calculatedHeight = calculatedWidth / 1.5; // 3:2 aspect ratio
+  const maxHeight = CONFIG.desiredPixelHeight * unitsPerPixel;
+  
+  // Use the smaller of calculated height or max height
+  CONFIG.cardWidth = calculatedWidth;
+  CONFIG.cardHeight = Math.min(calculatedHeight, maxHeight);
+  
+  // Adjust width to maintain aspect ratio if height was constrained
+  if (CONFIG.cardHeight === maxHeight) {
+    CONFIG.cardWidth = maxHeight * 1.5; // Maintain 3:2 aspect ratio
+  }
+  
+  // Debug logging for card dimensions
+  console.log('Card dimensions:', {
+    calculatedWidth: calculatedWidth / unitsPerPixel + 'px',
+    calculatedHeight: calculatedHeight / unitsPerPixel + 'px',
+    maxHeight: maxHeight / unitsPerPixel + 'px',
+    finalWidth: CONFIG.cardWidth / unitsPerPixel + 'px',
+    finalHeight: CONFIG.cardHeight / unitsPerPixel + 'px',
+    viewportWidth: window.innerWidth + 'px',
+    viewportHeight: window.innerHeight + 'px'
+  });
+  // Gap equal to the desired pixel gap converted to world units (e.g. 24 px)
+  const gapUnits = CONFIG.desiredPixelGap * unitsPerPixel;
+  // Store viewport width for later "off-screen" calculations
+  CONFIG.viewportWidthUnits = viewportWidthUnits;
+  CONFIG.cardSpacing = CONFIG.cardWidth + gapUnits;
+
+  // Any card whose center is further than this from viewport centre will be ignored in the RAF update loop
+	offscreenThreshold = viewportWidthUnits * 0.7 + CONFIG.cardWidth * 2;
+
+  // Corner radius in UV space (8px on the 400-px texture width)
+  CONFIG.cornerRadiusUV = 8 / CONFIG.desiredPixelWidth;
 
   // High-quality renderer
   renderer = new THREE.WebGLRenderer({
@@ -625,141 +665,9 @@ function initThreeScene() {
 	// Remove webglcontextrestored event handler referencing reinitializeGallery
 }
 
-/**
- * Clean up existing gallery state to prevent duplicates
- */
-function cleanupGallery() {
-  console.log('Cleaning up existing gallery state...');
-  
-  // Stop render loop
-  if (renderer && renderer.setAnimationLoop) {
-    renderer.setAnimationLoop(null);
-  }
-  
-  // Remove all event listeners
-  removeAllEventListeners();
-  
-  // Clear all cards from scene
-  if (scene && allProjectCards.length > 0) {
-    allProjectCards.forEach(card => {
-      if (card.geometry) {
-        card.geometry.dispose();
-      }
-      if (card.material) {
-        if (card.material.map) card.material.map.dispose();
-        card.material.dispose();
-      }
-      scene.remove(card);
-    });
-  }
-  
-  // Clear arrays
-  projectCards.length = 0;
-  allProjectCards.length = 0;
-  
-  // Reset state variables
-  isSceneInitialized = false;
-  isGalleryFullyLoaded = false;
-  isIntroAnimationActive = false;
-  scrollVelocity = 0;
-  targetScrollPosition = 0;
-  currentScrollPosition = 0;
-  hasMouseMoved = false;
-  hoveredProjectIndex = -1;
-  hoveredProjectMesh = null;
-  
-  // Clear texture cache
-  textureCache.clear();
-  
-  // Kill all animations
-  AnimationSystem.killAll();
-  
-  // Remove hover label
-  if (hoverLabelContainer && hoverLabelContainer.parentNode) {
-    hoverLabelContainer.parentNode.removeChild(hoverLabelContainer);
-    hoverLabelContainer = null;
-    hoverLabelTitle = null;
-    hoverLabelCategory = null;
-  }
-  
-  console.log('Gallery cleanup complete');
-}
-
-/**
- * Update card dimensions based on viewport size with responsive constraints
- * Only called during initial setup, not during resize
- */
-function updateCardDimensions() {
-  if (!isSceneInitialized) return;
-  
-  // Calculate viewport dimensions in world units
-  const viewportHeightUnits = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const viewportWidthUnits = viewportHeightUnits * camera.aspect;
-  const unitsPerPixel = viewportWidthUnits / window.innerWidth;
-  
-  // Responsive card sizing with min/max constraints
-  const minCardWidth = 300; // Minimum card width in pixels
-  const maxCardWidth = 800; // Maximum card width in pixels
-  const minCardHeight = 200; // Minimum card height in pixels
-  const maxCardHeight = 533; // Maximum card height in pixels (maintains 3:2 ratio)
-  
-  // Calculate desired card width based on viewport
-  let desiredCardWidth = CONFIG.desiredPixelWidth;
-  
-  // On small screens, scale down but maintain minimum size
-  if (window.innerWidth < 768) {
-    desiredCardWidth = Math.max(minCardWidth, window.innerWidth * 0.8);
-  }
-  // On medium screens, use standard size
-  else if (window.innerWidth < 1200) {
-    desiredCardWidth = CONFIG.desiredPixelWidth;
-  }
-  // On large screens, scale up but maintain maximum size
-  else {
-    desiredCardWidth = Math.min(maxCardWidth, window.innerWidth * 0.15);
-  }
-  
-  // Apply constraints
-  desiredCardWidth = Math.max(minCardWidth, Math.min(maxCardWidth, desiredCardWidth));
-  const desiredCardHeight = Math.max(minCardHeight, Math.min(maxCardHeight, desiredCardWidth / 1.5));
-  
-  // Convert to world units
-  CONFIG.cardWidth = desiredCardWidth * unitsPerPixel;
-  CONFIG.cardHeight = desiredCardHeight * unitsPerPixel;
-  
-  // Update spacing
-  const gapUnits = CONFIG.desiredPixelGap * unitsPerPixel;
-  CONFIG.cardSpacing = CONFIG.cardWidth + gapUnits;
-  CONFIG.viewportWidthUnits = viewportWidthUnits;
-  
-  // Update offscreen threshold
-  offscreenThreshold = viewportWidthUnits * 0.7 + CONFIG.cardWidth * 2;
-  
-  // Update corner radius
-  CONFIG.cornerRadiusUV = 8 / desiredCardWidth;
-  
-  console.log('Initial card dimensions set:', {
-    width: CONFIG.cardWidth,
-    height: CONFIG.cardHeight,
-    spacing: CONFIG.cardSpacing,
-    viewportWidth: window.innerWidth,
-    desiredCardWidth: desiredCardWidth
-  });
-}
-
 // Remove DOMContentLoaded fallback. Only initialize gallery on 'page:transition:end'.
 function startGallery() {
-  console.log('startGallery called, already initialized:', window.portfolioGalleryInitialized);
-  
-  if (window.portfolioGalleryInitialized) {
-    console.log('Gallery already initialized, skipping...');
-    return;
-  }
-  
-  // Clean up any existing gallery state
-  cleanupGallery();
-  
-  console.log('Initializing gallery...');
+  if (window.portfolioGalleryInitialized) return;
   extractProjectData();
   initThreeScene();
   createGallery();
@@ -767,14 +675,10 @@ function startGallery() {
   startRenderLoopEnhancedWithSnap();
   createHoverTitle();
   window.portfolioGalleryInitialized = true;
-  console.log('Gallery initialization complete');
 }
 
 // Make startGallery globally available
-window.startGallery = startGallery;
-
-// Make cleanupGallery globally available for page transitions
-window.cleanupGallery = cleanupGallery; 
+window.startGallery = startGallery; 
 
 /**
  * createGallery()
@@ -785,14 +689,6 @@ window.cleanupGallery = cleanupGallery;
  * the `playIntroAnimation`.
  */
 async function createGallery() {
-  console.log('createGallery called, existing cards:', allProjectCards.length);
-  
-  // Ensure we don't have existing cards
-  if (allProjectCards.length > 0) {
-    console.warn('Cards already exist, cleaning up first...');
-    cleanupGallery();
-  }
-  
   // Loader overlay disabled – start building gallery immediately
   // Reset loading counters
   loadedTextureCount = 0;
@@ -1245,14 +1141,13 @@ if (typeof gsap !== "undefined" && typeof CustomEase !== "undefined") {
 // Initialize gallery when page transition ends
 window.addEventListener('page:transition:end', startGallery);
 
-// Also initialize if libraries are already loaded and we're on the right page
+// Also initialize if libraries are already loaded
 if (typeof gsap !== "undefined" && typeof THREE !== "undefined") {
   // Check if we're on the right page and data is ready
   if (document.getElementById('project-data') && document.getElementById('project-slider')) {
-    // Wait a bit for everything to be ready, but only if not already initialized
+    // Wait a bit for everything to be ready
     setTimeout(() => {
       if (!window.portfolioGalleryInitialized) {
-        console.log('Auto-initializing gallery (libraries loaded)');
         startGallery();
       }
     }, 100);
@@ -1524,17 +1419,11 @@ function setupControlsEnhancedWithDrag() {
   }
 
   // Resize (existing)
-  // Simple resize handler - only update camera and renderer
   const resizeHandler = () => {
     if (!isSceneInitialized) return;
-    
-    // Update camera and renderer immediately
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    
-    // Don't update card dimensions on resize to prevent duplicates
-    // Cards will maintain their original size for now
   };
   window.addEventListener("resize", resizeHandler);
   eventHandlers.push(["resize", resizeHandler]);
