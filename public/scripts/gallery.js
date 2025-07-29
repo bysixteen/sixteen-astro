@@ -588,6 +588,11 @@ function calculateCardDimensions() {
   // Store viewport width for later "off-screen" calculations
   CONFIG.viewportWidthUnits = viewportWidthUnits;
   CONFIG.cardSpacing = CONFIG.cardWidth + gapUnits;
+  
+  // Store initial card spacing to prevent resizing issues
+  if (!CONFIG.initialCardSpacing) {
+    CONFIG.initialCardSpacing = CONFIG.cardSpacing;
+  }
 
   // Any card whose center is further than this from viewport centre will be ignored in the RAF update loop
   offscreenThreshold = viewportWidthUnits * 0.7 + CONFIG.cardWidth * 2;
@@ -1814,10 +1819,13 @@ function updateAllCards(elapsedTime, deltaSec) {
     // Position updates only when not intro animating
     let screenX;
 		if (!isIntroAnimationActive) {
-			screenX =
-				project.userData.baseX +
-				project.userData.offset -
-				currentScrollPosition;
+			// Use the initial card spacing to prevent resizing issues
+			const cardSpacing = CONFIG.initialCardSpacing || CONFIG.cardSpacing;
+			const centerOffset = (projectData.length - 1.0) * cardSpacing * 0.5;
+			const setIndex = project.userData.index;
+			const baseX = setIndex * cardSpacing - centerOffset;
+			
+			screenX = baseX + project.userData.offset - currentScrollPosition;
       project.position.x = screenX;
     } else {
       // During intro the card is already animating; don't interfere with GSAP
