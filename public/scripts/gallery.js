@@ -626,6 +626,66 @@ function initThreeScene() {
 }
 
 /**
+ * Clean up existing gallery state to prevent duplicates
+ */
+function cleanupGallery() {
+  console.log('Cleaning up existing gallery state...');
+  
+  // Stop render loop
+  if (renderer && renderer.setAnimationLoop) {
+    renderer.setAnimationLoop(null);
+  }
+  
+  // Remove all event listeners
+  removeAllEventListeners();
+  
+  // Clear all cards from scene
+  if (scene && allProjectCards.length > 0) {
+    allProjectCards.forEach(card => {
+      if (card.geometry) {
+        card.geometry.dispose();
+      }
+      if (card.material) {
+        if (card.material.map) card.material.map.dispose();
+        card.material.dispose();
+      }
+      scene.remove(card);
+    });
+  }
+  
+  // Clear arrays
+  projectCards.length = 0;
+  allProjectCards.length = 0;
+  
+  // Reset state variables
+  isSceneInitialized = false;
+  isGalleryFullyLoaded = false;
+  isIntroAnimationActive = false;
+  scrollVelocity = 0;
+  targetScrollPosition = 0;
+  currentScrollPosition = 0;
+  hasMouseMoved = false;
+  hoveredProjectIndex = -1;
+  hoveredProjectMesh = null;
+  
+  // Clear texture cache
+  textureCache.clear();
+  
+  // Kill all animations
+  AnimationSystem.killAll();
+  
+  // Remove hover label
+  if (hoverLabelContainer && hoverLabelContainer.parentNode) {
+    hoverLabelContainer.parentNode.removeChild(hoverLabelContainer);
+    hoverLabelContainer = null;
+    hoverLabelTitle = null;
+    hoverLabelCategory = null;
+  }
+  
+  console.log('Gallery cleanup complete');
+}
+
+/**
  * Update card dimensions based on viewport size with responsive constraints
  */
 function updateCardDimensions() {
@@ -704,7 +764,17 @@ function updateCardDimensions() {
 
 // Remove DOMContentLoaded fallback. Only initialize gallery on 'page:transition:end'.
 function startGallery() {
-  if (window.portfolioGalleryInitialized) return;
+  console.log('startGallery called, already initialized:', window.portfolioGalleryInitialized);
+  
+  if (window.portfolioGalleryInitialized) {
+    console.log('Gallery already initialized, skipping...');
+    return;
+  }
+  
+  // Clean up any existing gallery state
+  cleanupGallery();
+  
+  console.log('Initializing gallery...');
   extractProjectData();
   initThreeScene();
   createGallery();
@@ -712,10 +782,14 @@ function startGallery() {
   startRenderLoopEnhancedWithSnap();
   createHoverTitle();
   window.portfolioGalleryInitialized = true;
+  console.log('Gallery initialization complete');
 }
 
 // Make startGallery globally available
-window.startGallery = startGallery; 
+window.startGallery = startGallery;
+
+// Make cleanupGallery globally available for page transitions
+window.cleanupGallery = cleanupGallery; 
 
 /**
  * createGallery()
@@ -726,6 +800,14 @@ window.startGallery = startGallery;
  * the `playIntroAnimation`.
  */
 async function createGallery() {
+  console.log('createGallery called, existing cards:', allProjectCards.length);
+  
+  // Ensure we don't have existing cards
+  if (allProjectCards.length > 0) {
+    console.warn('Cards already exist, cleaning up first...');
+    cleanupGallery();
+  }
+  
   // Loader overlay disabled – start building gallery immediately
   // Reset loading counters
   loadedTextureCount = 0;
@@ -1178,13 +1260,14 @@ if (typeof gsap !== "undefined" && typeof CustomEase !== "undefined") {
 // Initialize gallery when page transition ends
 window.addEventListener('page:transition:end', startGallery);
 
-// Also initialize if libraries are already loaded
+// Also initialize if libraries are already loaded and we're on the right page
 if (typeof gsap !== "undefined" && typeof THREE !== "undefined") {
   // Check if we're on the right page and data is ready
   if (document.getElementById('project-data') && document.getElementById('project-slider')) {
-    // Wait a bit for everything to be ready
+    // Wait a bit for everything to be ready, but only if not already initialized
     setTimeout(() => {
       if (!window.portfolioGalleryInitialized) {
+        console.log('Auto-initializing gallery (libraries loaded)');
         startGallery();
       }
     }, 100);
