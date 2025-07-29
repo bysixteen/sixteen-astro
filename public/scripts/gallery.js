@@ -575,27 +575,9 @@ function initThreeScene() {
   // Further back for larger cards
 
   // ---------------------------------------------------------
-  // Calculate card dimensions in world units to equal ~400px
+  // Calculate initial card dimensions with responsive sizing
   // ---------------------------------------------------------
-  const viewportHeightUnits =
-    2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const viewportWidthUnits = viewportHeightUnits * camera.aspect;
-  const unitsPerPixel = viewportWidthUnits / window.innerWidth;
-
-  CONFIG.cardWidth = CONFIG.desiredPixelWidth * unitsPerPixel;
-  CONFIG.cardHeight = CONFIG.cardWidth / 1.5;
-  // Maintain 3:2 aspect ratio (1.5)
-  // Gap equal to the desired pixel gap converted to world units (e.g. 24 px)
-  const gapUnits = CONFIG.desiredPixelGap * unitsPerPixel;
-  // Store viewport width for later "off-screen" calculations
-  CONFIG.viewportWidthUnits = viewportWidthUnits;
-  CONFIG.cardSpacing = CONFIG.cardWidth + gapUnits;
-
-  // Any card whose center is further than this from viewport centre will be ignored in the RAF update loop
-	offscreenThreshold = viewportWidthUnits * 0.7 + CONFIG.cardWidth * 2;
-
-  // Corner radius in UV space (8px on the 400-px texture width)
-  CONFIG.cornerRadiusUV = 8 / CONFIG.desiredPixelWidth;
+  updateCardDimensions();
 
   // High-quality renderer
   renderer = new THREE.WebGLRenderer({
@@ -641,6 +623,83 @@ function initThreeScene() {
 	);
 
 	// Remove webglcontextrestored event handler referencing reinitializeGallery
+}
+
+/**
+ * Update card dimensions based on viewport size with responsive constraints
+ */
+function updateCardDimensions() {
+  if (!isSceneInitialized) return;
+  
+  // Calculate viewport dimensions in world units
+  const viewportHeightUnits = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const viewportWidthUnits = viewportHeightUnits * camera.aspect;
+  const unitsPerPixel = viewportWidthUnits / window.innerWidth;
+  
+  // Responsive card sizing with min/max constraints
+  const minCardWidth = 300; // Minimum card width in pixels
+  const maxCardWidth = 800; // Maximum card width in pixels
+  const minCardHeight = 200; // Minimum card height in pixels
+  const maxCardHeight = 533; // Maximum card height in pixels (maintains 3:2 ratio)
+  
+  // Calculate desired card width based on viewport
+  let desiredCardWidth = CONFIG.desiredPixelWidth;
+  
+  // On small screens, scale down but maintain minimum size
+  if (window.innerWidth < 768) {
+    desiredCardWidth = Math.max(minCardWidth, window.innerWidth * 0.8);
+  }
+  // On medium screens, use standard size
+  else if (window.innerWidth < 1200) {
+    desiredCardWidth = CONFIG.desiredPixelWidth;
+  }
+  // On large screens, scale up but maintain maximum size
+  else {
+    desiredCardWidth = Math.min(maxCardWidth, window.innerWidth * 0.15);
+  }
+  
+  // Apply constraints
+  desiredCardWidth = Math.max(minCardWidth, Math.min(maxCardWidth, desiredCardWidth));
+  const desiredCardHeight = Math.max(minCardHeight, Math.min(maxCardHeight, desiredCardWidth / 1.5));
+  
+  // Convert to world units
+  CONFIG.cardWidth = desiredCardWidth * unitsPerPixel;
+  CONFIG.cardHeight = desiredCardHeight * unitsPerPixel;
+  
+  // Update spacing
+  const gapUnits = CONFIG.desiredPixelGap * unitsPerPixel;
+  CONFIG.cardSpacing = CONFIG.cardWidth + gapUnits;
+  CONFIG.viewportWidthUnits = viewportWidthUnits;
+  
+  // Update offscreen threshold
+  offscreenThreshold = viewportWidthUnits * 0.7 + CONFIG.cardWidth * 2;
+  
+  // Update corner radius
+  CONFIG.cornerRadiusUV = 8 / desiredCardWidth;
+  
+  // Update all existing cards with new dimensions
+  if (allProjectCards.length > 0) {
+    allProjectCards.forEach(card => {
+      if (card.geometry) {
+        // Update geometry dimensions
+        card.geometry.dispose();
+        card.geometry = new THREE.PlaneGeometry(CONFIG.cardWidth, CONFIG.cardHeight, 32, 32);
+      }
+      
+      // Update material uniforms if they exist
+      if (card.material && card.material.uniforms) {
+        card.material.uniforms.uCornerRadiusUV.value = CONFIG.cornerRadiusUV;
+      }
+    });
+  }
+  
+  console.log('Card dimensions updated:', {
+    width: CONFIG.cardWidth,
+    height: CONFIG.cardHeight,
+    spacing: CONFIG.cardSpacing,
+    viewportWidth: window.innerWidth,
+    desiredCardWidth: desiredCardWidth
+  });
 }
 
 // Remove DOMContentLoaded fallback. Only initialize gallery on 'page:transition:end'.
@@ -1397,11 +1456,21 @@ function setupControlsEnhancedWithDrag() {
   }
 
   // Resize (existing)
+  // Debounced resize handler to prevent excessive recalculations
+  let resizeTimeout;
   const resizeHandler = () => {
     if (!isSceneInitialized) return;
+    
+    // Update camera and renderer immediately
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    
+    // Debounce card dimension updates
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      updateCardDimensions();
+    }, 150); // Wait 150ms after resize ends
   };
   window.addEventListener("resize", resizeHandler);
   eventHandlers.push(["resize", resizeHandler]);
