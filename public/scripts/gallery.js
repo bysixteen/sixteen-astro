@@ -687,6 +687,7 @@ function cleanupGallery() {
 
 /**
  * Update card dimensions based on viewport size with responsive constraints
+ * Only called during initial setup, not during resize
  */
 function updateCardDimensions() {
   if (!isSceneInitialized) return;
@@ -737,23 +738,7 @@ function updateCardDimensions() {
   // Update corner radius
   CONFIG.cornerRadiusUV = 8 / desiredCardWidth;
   
-  // Update all existing cards with new dimensions
-  if (allProjectCards.length > 0) {
-    allProjectCards.forEach(card => {
-      if (card.geometry) {
-        // Update geometry dimensions
-        card.geometry.dispose();
-        card.geometry = new THREE.PlaneGeometry(CONFIG.cardWidth, CONFIG.cardHeight, 32, 32);
-      }
-      
-      // Update material uniforms if they exist
-      if (card.material && card.material.uniforms) {
-        card.material.uniforms.uCornerRadiusUV.value = CONFIG.cornerRadiusUV;
-      }
-    });
-  }
-  
-  console.log('Card dimensions updated:', {
+  console.log('Initial card dimensions set:', {
     width: CONFIG.cardWidth,
     height: CONFIG.cardHeight,
     spacing: CONFIG.cardSpacing,
@@ -1539,8 +1524,7 @@ function setupControlsEnhancedWithDrag() {
   }
 
   // Resize (existing)
-  // Debounced resize handler to prevent excessive recalculations
-  let resizeTimeout;
+  // Simple resize handler - only update camera and renderer
   const resizeHandler = () => {
     if (!isSceneInitialized) return;
     
@@ -1549,11 +1533,8 @@ function setupControlsEnhancedWithDrag() {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     
-    // Debounce card dimension updates
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-      updateCardDimensions();
-    }, 150); // Wait 150ms after resize ends
+    // Don't update card dimensions on resize to prevent duplicates
+    // Cards will maintain their original size for now
   };
   window.addEventListener("resize", resizeHandler);
   eventHandlers.push(["resize", resizeHandler]);
