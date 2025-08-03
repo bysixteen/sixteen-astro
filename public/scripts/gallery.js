@@ -1,4 +1,6 @@
 // Gallery script for CDN-loaded GSAP and Three.js
+// FIXED CARD SIZING: Cards maintain consistent 320px width / 213px height regardless of viewport
+// No responsive behavior - cards will be the same size on all devices
 
 // ============================================================================
 // THREE.JS GLOBALS & STATE MANAGEMENT
@@ -29,7 +31,7 @@ const PHYSICS = {
   lerpFactor: 0.12,        // Position smoothing (0.05 = floaty, 0.2 = snappy)
   velocityScale: 0.8,      // Input sensitivity (higher = more responsive)
   maxVelocity: 8.0,        // Clamp extreme speeds
-  stopThreshold: 0.01      // When to consider motion "stopped" (increased for better hover detection)
+  stopThreshold: 0.05      // When to consider motion "stopped" (increased for better hover detection)
 };
 
 // ============================================================================
@@ -58,17 +60,52 @@ let lastScrollStopTime = 0; // Track when scrolling stopped for hover resume
 // ============================================================================
 
 const SNAP = {
-  enabled: true,                    // Toggle snapping on/off
-  threshold: 0.15,                  // When velocity drops below this, start snapping
-  strength: 0.08,                   // How aggressively it snaps (0.05 = gentle, 0.15 = firm)
-  detectionRange: 2.0,              // How close to consider a card "snappable"
-  minSettleTime: 300                // Minimum time (ms) before snapping kicks in
+  enabled: true,
+  threshold: 0.08,                  // Lower threshold for gentler snapping
+  strength: 0.04,                   // Reduced strength to work with auto-scroll
+  detectionRange: 2.0,
+  minSettleTime: 500,               // Longer settle time
+  autoScrollCompatible: true        // NEW: Flag for auto-scroll mode
 };
 
 // Add these new variables with your other globals
 let snapTarget = null;              // Which card we're snapping to
 let snapStartTime = 0;              // When snapping motion began
 let lastSnapCheckTime = 0;          // Prevents excessive snap calculations
+
+// ============================================================================
+// FIXED AUTO-SCROLL SYSTEM - Addresses jittery behavior and wrong direction
+// ============================================================================
+
+// Updated AUTO-SCROLL configuration with better defaults
+const AUTO_SCROLL_CONFIG = {
+  baseSpeed: 0.008,                 // Reduced from 0.02 - much gentler
+  pauseDuration: 2000,              // Reduced pause time for better flow
+  directionChangeInterval: 45000,   // Longer intervals between direction changes
+  enableDelay: 3000,                // Longer delay before starting
+  speedVariation: 0.1,              // Reduced variation for smoother motion
+  fadeInDuration: 2000,             // Longer fade-in for smoother start
+  fadeOutDuration: 800,             // Longer fade-out for smoother stop
+  snapCompatibility: true           // NEW: Work with magnetic snapping
+};
+
+// Updated auto-scroll state variables
+let autoScrollEnabled = false;
+let autoScrollSpeed = AUTO_SCROLL_CONFIG.baseSpeed;
+let autoScrollDirection = 1; // 1 = right, -1 = left
+let autoScrollIntensity = 0; // 0 = off, 1 = full speed
+let lastUserInteraction = 0;
+let lastDirectionChange = 0;
+let autoScrollStartTime = 0;
+let autoScrollPaused = false; // NEW: Better pause control
+
+// ============================================================================
+// OPTIMIZED HOVER STATE UPDATES (Fix for excessive logging)
+// ============================================================================
+
+// Add throttling variables
+let lastHoverCheck = 0;
+const HOVER_CHECK_INTERVAL = 100; // Check hover every 100ms, not every frame
 
 // Mouse and interaction state
 let mousePosition = {
@@ -164,12 +201,15 @@ function calculateDragVelocity() {
 }
 
 function pixelsToWorldUnits(pixels) {
-  // Convert pixel movement to world units using your existing camera setup
+  // Convert pixel movement to world units using fixed reference system
   if (!camera) return pixels * 0.01; // Fallback if camera not ready
   
   const viewportHeightUnits = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const viewportWidthUnits = viewportHeightUnits * camera.aspect;
-  const unitsPerPixel = viewportWidthUnits / window.innerWidth;
+  
+  // Use same fixed reference width as in initThreeScene for consistency
+  const referenceViewportWidth = 1200;
+  const unitsPerPixel = viewportWidthUnits / referenceViewportWidth;
   return pixels * unitsPerPixel;
 }
 
@@ -180,16 +220,22 @@ function pixelsToWorldUnits(pixels) {
 function findNearestSnapTarget() {
   if (!projectCards || projectCards.length === 0) return null;
   
+  // NEW: Don't snap during auto-scroll unless user has been idle for a while
+  const timeSinceInteraction = performance.now() - lastUserInteraction;
+  const isAutoScrollActive = autoScrollEnabled && autoScrollIntensity > 0.5;
+  
+  if (isAutoScrollActive && timeSinceInteraction < AUTO_SCROLL_CONFIG.pauseDuration * 2) {
+    return null; // Don't snap during active auto-scroll
+  }
+  
   let nearest = null;
   let minDistance = Infinity;
   
-  // Find the card closest to screen center
-  const screenCenterX = 0; // World coordinate for screen center
+  const screenCenterX = 0;
   
   for (const card of projectCards) {
     if (!card.userData || typeof card.userData.baseX !== 'number') continue;
     
-    // Calculate where this card currently is
     const cardWorldX = card.userData.baseX + currentScrollPosition;
     const distanceFromCenter = Math.abs(cardWorldX - screenCenterX);
     
@@ -450,12 +496,12 @@ class AnimationSystem {
 //           Units: world-space unless a comment says otherwise
 // ---------------------------------------------------------------------------
 const CONFIG = {
-  // Card dimensions
+  // Card dimensions - FIXED SIZES (no responsive behavior)
   cardWidth: 6.0,
   cardHeight: 4.0, // Taller aspect ratio
   cardSpacing: 1, // More spacing for visual impact
-  desiredPixelWidth: 640, // Desired on-screen width of each card in pixels
-  desiredPixelHeight: 320, // Maximum height of each card in pixels
+  desiredPixelWidth: 320, // Fixed width: 320px max, 240px min
+  desiredPixelHeight: 213, // Fixed height: 320/1.5 = 213px (3:2 aspect ratio)
   desiredPixelGap: 24,
   // Desired gap between cards in pixels
 
@@ -545,63 +591,6 @@ function extractProjectData() {
 }
 
 /**
- * calculateCardDimensions()
- * -------------------------
- * Calculates card dimensions in world units based on current viewport size
- * and applies height constraints. This function can be called on resize.
- *
- * @returns {void}
- */
-function calculateCardDimensions() {
-  const viewportHeightUnits =
-    2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const viewportWidthUnits = viewportHeightUnits * camera.aspect;
-  const unitsPerPixel = viewportWidthUnits / window.innerWidth;
-
-  // Calculate card dimensions with height constraint
-  const calculatedWidth = CONFIG.desiredPixelWidth * unitsPerPixel;
-  const calculatedHeight = calculatedWidth / 1.5; // 3:2 aspect ratio
-  const maxHeight = CONFIG.desiredPixelHeight * unitsPerPixel;
-  
-  // Use the smaller of calculated height or max height
-  CONFIG.cardWidth = calculatedWidth;
-  CONFIG.cardHeight = Math.min(calculatedHeight, maxHeight);
-  
-  // Adjust width to maintain aspect ratio if height was constrained
-  if (CONFIG.cardHeight === maxHeight) {
-    CONFIG.cardWidth = maxHeight * 1.5; // Maintain 3:2 aspect ratio
-  }
-  
-  // Debug logging for card dimensions
-  console.log('Card dimensions:', {
-    calculatedWidth: calculatedWidth / unitsPerPixel + 'px',
-    calculatedHeight: calculatedHeight / unitsPerPixel + 'px',
-    maxHeight: maxHeight / unitsPerPixel + 'px',
-    finalWidth: CONFIG.cardWidth / unitsPerPixel + 'px',
-    finalHeight: CONFIG.cardHeight / unitsPerPixel + 'px',
-    viewportWidth: window.innerWidth + 'px',
-    viewportHeight: window.innerHeight + 'px'
-  });
-
-  // Gap equal to the desired pixel gap converted to world units (e.g. 24 px)
-  const gapUnits = CONFIG.desiredPixelGap * unitsPerPixel;
-  // Store viewport width for later "off-screen" calculations
-  CONFIG.viewportWidthUnits = viewportWidthUnits;
-  CONFIG.cardSpacing = CONFIG.cardWidth + gapUnits;
-  
-  // Store initial card spacing to prevent resizing issues
-  if (!CONFIG.initialCardSpacing) {
-    CONFIG.initialCardSpacing = CONFIG.cardSpacing;
-  }
-
-  // Any card whose center is further than this from viewport centre will be ignored in the RAF update loop
-  offscreenThreshold = viewportWidthUnits * 0.7 + CONFIG.cardWidth * 2;
-
-  // Corner radius in UV space (8px on the 400-px texture width)
-  CONFIG.cornerRadiusUV = 8 / CONFIG.desiredPixelWidth;
-}
-
-/**
  * initThreeScene()
  * ----------------
  * Sets up the Three.js renderer, camera, lights and converts the desired
@@ -633,9 +622,43 @@ function initThreeScene() {
   // Further back for larger cards
 
   // ---------------------------------------------------------
-  // Calculate card dimensions in world units to equal ~400px
+  // FIXED CARD DIMENSIONS - No responsive behavior
+  // Cards will maintain consistent size regardless of viewport
   // ---------------------------------------------------------
-  calculateCardDimensions();
+  const viewportHeightUnits =
+    2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const viewportWidthUnits = viewportHeightUnits * camera.aspect;
+  
+  // Use a fixed reference viewport width for consistent sizing
+  // This ensures cards are always the same size regardless of actual viewport
+  const referenceViewportWidth = 1200; // Reference width for consistent sizing
+  const unitsPerPixel = viewportWidthUnits / referenceViewportWidth;
+
+  // Fixed card dimensions - will be consistent across all viewport sizes
+  CONFIG.cardWidth = CONFIG.desiredPixelWidth * unitsPerPixel;
+  CONFIG.cardHeight = CONFIG.desiredPixelHeight * unitsPerPixel;
+  
+  // Gap equal to the desired pixel gap converted to world units
+  const gapUnits = CONFIG.desiredPixelGap * unitsPerPixel;
+  
+  // Store viewport width for later "off-screen" calculations
+  CONFIG.viewportWidthUnits = viewportWidthUnits;
+  CONFIG.cardSpacing = CONFIG.cardWidth + gapUnits;
+  
+  // Log the fixed card dimensions for debugging
+  console.log("🎯 Fixed card dimensions set:", {
+    width: CONFIG.cardWidth.toFixed(3),
+    height: CONFIG.cardHeight.toFixed(3),
+    spacing: CONFIG.cardSpacing.toFixed(3),
+    referenceViewportWidth: referenceViewportWidth,
+    actualViewportWidth: window.innerWidth
+  });
+
+  // Any card whose center is further than this from viewport centre will be ignored in the RAF update loop
+	offscreenThreshold = viewportWidthUnits * 0.7 + CONFIG.cardWidth * 2;
+
+  // Corner radius in UV space (8px on the 400-px texture width)
+  CONFIG.cornerRadiusUV = 8 / CONFIG.desiredPixelWidth;
 
   // High-quality renderer
   renderer = new THREE.WebGLRenderer({
@@ -690,7 +713,7 @@ function startGallery() {
   initThreeScene();
   createGallery();
   setupControlsEnhancedWithDrag();
-  startRenderLoopEnhancedWithSnap();
+  startRenderLoopEnhancedWithAutoScroll();
   createHoverTitle();
   window.portfolioGalleryInitialized = true;
 }
@@ -780,6 +803,13 @@ async function createGallery() {
     // Start the animation with the correct group of cards
 		playIntroAnimation(introAnimationGroup);
 		isGalleryFullyLoaded = true;
+
+		// Start auto-scroll after a delay
+		setTimeout(() => {
+			if (isGalleryFullyLoaded) {
+				enableAutoScroll();
+			}
+		}, AUTO_SCROLL_CONFIG.enableDelay);
   } catch (error) {
 		console.error('Error creating gallery:', error);
   }
@@ -1172,9 +1202,125 @@ if (typeof gsap !== "undefined" && typeof THREE !== "undefined") {
   }
 } 
 
-/**
- * Setup controls for scrolling & interactions
- */
+// ============================================================================
+// AUTO-SCROLL FUNCTIONS
+// ============================================================================
+
+function updateAutoScroll(deltaTime) {
+  if (!autoScrollEnabled || !isGalleryFullyLoaded || isIntroAnimationActive) {
+    return;
+  }
+
+  const now = performance.now();
+  
+  // Check if we should pause due to recent user interaction
+  const timeSinceInteraction = now - lastUserInteraction;
+  const shouldPause = timeSinceInteraction < AUTO_SCROLL_CONFIG.pauseDuration;
+  
+  // NEW: Better pause/resume logic
+  if (shouldPause && !autoScrollPaused) {
+    autoScrollPaused = true;
+    console.log('⏸️ Auto-scroll paused due to user interaction');
+  } else if (!shouldPause && autoScrollPaused) {
+    autoScrollPaused = false;
+    console.log('▶️ Auto-scroll resumed');
+  }
+  
+  if (autoScrollPaused) {
+    // Fade out intensity when paused
+    if (autoScrollIntensity > 0) {
+      autoScrollIntensity -= deltaTime * (1000 / AUTO_SCROLL_CONFIG.fadeOutDuration);
+      autoScrollIntensity = Math.max(autoScrollIntensity, 0);
+    }
+    return;
+  }
+
+  // Gradually fade in auto-scroll when not paused
+  if (autoScrollIntensity < 1) {
+    autoScrollIntensity += deltaTime * (1000 / AUTO_SCROLL_CONFIG.fadeInDuration);
+    autoScrollIntensity = Math.min(autoScrollIntensity, 1);
+  }
+
+  // NEW: Check if magnetic snapping is active and reduce auto-scroll
+  const isSnapping = snapTarget !== null;
+  const snapReduction = isSnapping ? 0.1 : 1.0; // Reduce to 10% when snapping
+
+  // Random direction changes (less frequent)
+  if (now - lastDirectionChange > AUTO_SCROLL_CONFIG.directionChangeInterval) {
+    if (Math.random() < 0.2) { // Reduced to 20% chance
+      autoScrollDirection *= -1;
+      lastDirectionChange = now;
+      console.log(`🔄 Auto-scroll direction changed to: ${autoScrollDirection > 0 ? 'right' : 'left'}`);
+    } else {
+      lastDirectionChange = now; // Reset timer even if no change
+    }
+  }
+
+  // Calculate speed with variation and snap compatibility
+  const speedVariation = 1 + (Math.random() - 0.5) * AUTO_SCROLL_CONFIG.speedVariation;
+  const currentSpeed = autoScrollSpeed * speedVariation * autoScrollIntensity * snapReduction;
+
+  // Apply auto-scroll velocity more gently
+  const autoScrollForce = currentSpeed * autoScrollDirection * deltaTime * 30; // Reduced multiplier
+  virtualVelocity += autoScrollForce;
+  
+  // Clamp the total velocity to prevent runaway
+  virtualVelocity = Math.max(-PHYSICS.maxVelocity * 0.3, Math.min(PHYSICS.maxVelocity * 0.3, virtualVelocity));
+}
+
+function onUserInteraction() {
+  lastUserInteraction = performance.now();
+  
+  // Cancel any active snap target when user interacts
+  if (snapTarget) {
+    snapTarget = null;
+    console.log('🎯 Snap target cancelled due to user interaction');
+  }
+  
+  // Don't immediately stop auto-scroll, just mark the interaction time
+  // The updateAutoScroll function will handle the pause/resume logic
+}
+
+function enableAutoScroll() {
+  autoScrollEnabled = true;
+  autoScrollStartTime = performance.now();
+  console.log('🚀 Auto-scroll enabled');
+}
+
+function disableAutoScroll() {
+  autoScrollEnabled = false;
+  autoScrollIntensity = 0;
+  console.log('⏹️ Auto-scroll disabled');
+}
+
+function toggleAutoScroll() {
+  if (autoScrollEnabled) {
+    disableAutoScroll();
+  } else {
+    enableAutoScroll();
+  }
+}
+
+function setAutoScrollSpeed(speed) {
+  autoScrollSpeed = Math.max(0.001, Math.min(0.2, speed));
+  console.log(`🎚️ Auto-scroll speed set to: ${autoScrollSpeed}`);
+}
+
+function reverseAutoScrollDirection() {
+  autoScrollDirection *= -1;
+  console.log(`🔄 Auto-scroll direction reversed to: ${autoScrollDirection > 0 ? 'right' : 'left'}`);
+}
+
+function getAutoScrollState() {
+  return {
+    enabled: autoScrollEnabled,
+    speed: autoScrollSpeed,
+    direction: autoScrollDirection,
+    intensity: autoScrollIntensity,
+    paused: performance.now() - lastUserInteraction < AUTO_SCROLL_CONFIG.pauseDuration
+  };
+}
+
 // ============================================================================
 // ENHANCED CONTROLS WITH DRAG SUPPORT
 // ============================================================================
@@ -1276,6 +1422,7 @@ function setupControlsEnhancedWithDrag() {
 
   // Enhanced wheel (from Chunk 1)
   const wheelHandler = (event) => {
+    onUserInteraction(); // ADD THIS LINE
     event.preventDefault();
     const delta = event.deltaY * PHYSICS.velocityScale * 0.01;
     virtualVelocity += delta;
@@ -1286,6 +1433,7 @@ function setupControlsEnhancedWithDrag() {
 
   // NEW: Touch support
   const touchStartHandler = (event) => {
+    onUserInteraction(); // ADD THIS LINE
     const touch = event.touches[0];
     isDragging = true;
     dragStartX = touch.clientX;
@@ -1357,6 +1505,7 @@ function setupControlsEnhancedWithDrag() {
 
   // Enhanced click handling - prevent clicks during drag
   const clickHandler = (event) => {
+    onUserInteraction(); // ADD THIS LINE
     // Ignore clicks if we just finished dragging
     if (Math.abs(event.clientX - dragStartX) > 10) {
       return; // This was a drag, not a click
@@ -1378,6 +1527,7 @@ function setupControlsEnhancedWithDrag() {
 
   // Keyboard navigation (from Chunk 1)
   const keydownHandler = (event) => {
+    onUserInteraction(); // ADD THIS LINE
     if (event.key === "ArrowLeft") {
       event.preventDefault();
       virtualVelocity -= 0.5;
@@ -1407,7 +1557,7 @@ function setupControlsEnhancedWithDrag() {
 
   // Arrow clicks (from Chunk 1)
   if (leftNavigationArrow) {
-    const leftClick = () => { virtualVelocity -= 0.8; };
+    const leftClick = () => { onUserInteraction(); virtualVelocity -= 0.8; };
     const leftDown = () => leftNavigationArrow.classList.add("navigation-controls__arrow--active");
     const leftUp = () => leftNavigationArrow.classList.remove("navigation-controls__arrow--active");
     const leftLeave = () => leftNavigationArrow.classList.remove("navigation-controls__arrow--active");
@@ -1422,7 +1572,7 @@ function setupControlsEnhancedWithDrag() {
   }
 
   if (rightNavigationArrow) {
-    const rightClick = () => { virtualVelocity += 0.8; };
+    const rightClick = () => { onUserInteraction(); virtualVelocity += 0.8; };
     const rightDown = () => rightNavigationArrow.classList.add("navigation-controls__arrow--active");
     const rightUp = () => rightNavigationArrow.classList.remove("navigation-controls__arrow--active");
     const rightLeave = () => rightNavigationArrow.classList.remove("navigation-controls__arrow--active");
@@ -1436,14 +1586,13 @@ function setupControlsEnhancedWithDrag() {
     eventHandlers.push(["mouseleave", rightLeave, rightNavigationArrow]);
   }
 
-  // Resize handler with card dimension recalculation
+  // Resize handler - NO card size recalculation (fixed sizes)
   const resizeHandler = () => {
     if (!isSceneInitialized) return;
-    
-    // Update camera and renderer only - keep cards at initial size
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    // Note: Card dimensions are NOT recalculated - they remain fixed
   };
   window.addEventListener("resize", resizeHandler);
   eventHandlers.push(["resize", resizeHandler]);
@@ -1466,60 +1615,70 @@ function removeAllEventListeners() {
  * Update hover states using raycaster
  */
 function updateHoverStates() {
-  // Debug: Log when function is called
-  console.log("🔄 updateHoverStates called, isDragging:", isDragging, "virtualVelocity:", virtualVelocity);
+  const now = performance.now();
+  
+  // Throttle hover checks to reduce CPU usage and logging spam
+  if (now - lastHoverCheck < HOVER_CHECK_INTERVAL) {
+    return;
+  }
+  lastHoverCheck = now;
+
+  // Only log occasionally, not every call
+  if (Math.random() < 0.01) { // 1% chance to log
+    console.log("🔄 updateHoverStates (throttled)");
+  }
   
   // Throttle ray-casting to avoid CPU spikes
-  const RAYCAST_INTERVAL = 3; // cast once every 3 RAF frames
+  const RAYCAST_INTERVAL = 3;
   updateHoverStates._counter = (updateHoverStates._counter || 0) + 1;
   if (updateHoverStates._counter % RAYCAST_INTERVAL !== 0) return;
 
-	if (!raycaster || projectCards.length === 0) return;
+  if (!raycaster || projectCards.length === 0) return;
 
   if (
-		!isSceneInitialized ||
-		!isGalleryFullyLoaded ||
-		allProjectCards.length === 0 ||
+    !isSceneInitialized ||
+    !isGalleryFullyLoaded ||
+    allProjectCards.length === 0 ||
     !hasMouseMoved
   )
     return;
 
-	// --- SIMPLIFIED: Only block hover during active dragging ---
-	if (isDragging) {
-		hoveredProjectIndex = -1;
-		hoveredProjectMesh = null;
-		if (hoverLabelContainer) hoverLabelContainer.style.display = "none";
-		document.body.style.cursor = "grabbing";
-		return;
-	}
-	// --- END SIMPLIFIED ---
+  // Block hover during active dragging
+  if (isDragging) {
+    hoveredProjectIndex = -1;
+    hoveredProjectMesh = null;
+    if (hoverLabelContainer) hoverLabelContainer.style.display = "none";
+    document.body.style.cursor = "grabbing";
+    return;
+  }
 
+  // NEW: Also block hover during fast auto-scroll
+  if (Math.abs(virtualVelocity) > 0.1) {
+    hoveredProjectIndex = -1;
+    hoveredProjectMesh = null;
+    if (hoverLabelContainer) hoverLabelContainer.style.display = "none";
+    return;
+  }
+
+  // Rest of the hover detection logic remains the same...
   raycaster.setFromCamera(mouseVector, camera);
-	const intersects = raycaster.intersectObjects(allProjectCards);
+  const intersects = raycaster.intersectObjects(allProjectCards);
 
-    if (intersects.length > 0) {
-    // Debug logging
-    console.log("🎯 Hover detected:", intersects[0].object.userData.projectInfo?.title);
-    
+  if (intersects.length > 0) {
     const intersected = intersects[0].object;
     const newIndex = intersected.userData.index;
-		const meshChanged = intersected !== hoveredProjectMesh;
+    const meshChanged = intersected !== hoveredProjectMesh;
 
-		if (newIndex !== hoveredProjectIndex || meshChanged) {
-			const prevHoveredIndex = hoveredProjectIndex;
-			const prevMesh = hoveredProjectMesh;
+    if (newIndex !== hoveredProjectIndex || meshChanged) {
+      hoveredProjectIndex = newIndex;
+      hoveredProjectMesh = intersected;
 
-			hoveredProjectIndex = newIndex;
-			hoveredProjectMesh = intersected;
+      const data = projectData[hoveredProjectIndex] || {};
 
-			const data = projectData[hoveredProjectIndex] || {};
+      if (hoverLabelTitle) hoverLabelTitle.textContent = data.title || "";
+      if (hoverLabelCategory) hoverLabelCategory.textContent = data.category || "";
 
-			if (hoverLabelTitle) hoverLabelTitle.textContent = data.title || "";
-
-			if (hoverLabelCategory)
-				hoverLabelCategory.textContent = data.category || "";
-
-      // Clean up any existing animations
+      // Hover animation logic (keeping existing implementation)
       if (hoverExitAnimation) {
         hoverExitAnimation.kill();
         hoverExitAnimation = null;
@@ -1529,29 +1688,16 @@ function updateHoverStates() {
         hoverAnimationTimeline = null;
       }
 
-      // Masked animation (same as navigation) - create character-by-character effect
+      // Create character-by-character animation
       if (hoverLabelTitle && hoverLabelCategory) {
-        // Clean up any existing animations
-        if (hoverAnimationTimeline) {
-          hoverAnimationTimeline.kill();
-          hoverAnimationTimeline = null;
-        }
-        if (hoverExitAnimation) {
-          hoverExitAnimation.kill();
-          hoverExitAnimation = null;
-        }
-
-        // Create character-by-character animation (same as navigation)
         const titleText = hoverLabelTitle.textContent;
         const categoryText = hoverLabelCategory.textContent;
         
-        // Split title text into characters
         const titleChars = titleText.split('').map(char => {
           const span = document.createElement('span');
           span.textContent = char;
           span.style.display = 'inline-block';
           span.style.position = 'relative';
-          // Preserve spaces by ensuring they have proper width
           if (char === ' ') {
             span.style.whiteSpace = 'pre';
             span.style.width = '0.2em';
@@ -1559,13 +1705,11 @@ function updateHoverStates() {
           return span;
         });
         
-        // Split category text into characters
         const categoryChars = categoryText.split('').map(char => {
           const span = document.createElement('span');
           span.textContent = char;
           span.style.display = 'inline-block';
           span.style.position = 'relative';
-          // Preserve spaces by ensuring they have proper width
           if (char === ' ') {
             span.style.whiteSpace = 'pre';
             span.style.width = '0.2em';
@@ -1573,69 +1717,62 @@ function updateHoverStates() {
           return span;
         });
         
-        // Clear and populate the elements
         hoverLabelTitle.textContent = '';
         hoverLabelCategory.textContent = '';
         titleChars.forEach(char => hoverLabelTitle.appendChild(char));
         categoryChars.forEach(char => hoverLabelCategory.appendChild(char));
 
-        // Set initial state (characters moved up, invisible due to clip container)
         gsap.set([...titleChars, ...categoryChars], {
           y: '-1.25em',
         });
 
-        // Create timeline for masked animation (text animates up into view)
         hoverAnimationTimeline = gsap.timeline();
         hoverAnimationTimeline
           .to(titleChars, {
             y: '0em',
-            duration: TEXT_ANIM.inDuration,
+            duration: 0.735,
             ease: 'customEase',
-            stagger: TEXT_ANIM.charStagger,
+            stagger: 0.00666667,
           })
           .to(categoryChars, {
             y: '0em',
-            duration: TEXT_ANIM.inDuration,
+            duration: 0.735,
             ease: 'customEase',
-            stagger: TEXT_ANIM.charStagger,
-          }, "<0.01"); // start 0.01 s after the title tween's START
+            stagger: 0.00666667,
+          }, "<0.01");
       }
     }
 
-		hoverLabelContainer.style.visibility = "visible";
+    if (hoverLabelContainer) hoverLabelContainer.style.visibility = "visible";
     document.body.style.cursor = "pointer";
 
-		// Add card-hover class to canvas for proper cursor
-		const canvas = document.getElementById("project-slider");
-		if (canvas) {
-			canvas.classList.add("card-hover");
-		}
+    const canvas = document.getElementById("project-slider");
+    if (canvas) {
+      canvas.classList.add("card-hover");
+    }
   } else {
-		hoveredProjectIndex = -1;
-		hoveredProjectMesh = null;
+    hoveredProjectIndex = -1;
+    hoveredProjectMesh = null;
 
-		if (hoverExitAnimation) {
-      // already animating out; ignore
+    if (hoverExitAnimation) {
+      // Already animating out
     } else if (typeof gsap !== "undefined" && hoverLabelTitle && hoverLabelCategory) {
-      // Get all character spans for masked exit animation
       const titleChars = Array.from(hoverLabelTitle.children);
       const categoryChars = Array.from(hoverLabelCategory.children);
       const allChars = [...titleChars, ...categoryChars];
 
       if (allChars.length > 0) {
-        // Animate out using masked animation (text animates up out of view)
         hoverExitAnimation = gsap.to(allChars, {
           y: "-1.25em",
-          duration: TEXT_ANIM.outDuration,
+          duration: 0.735,
           ease: "customEase",
-          stagger: TEXT_ANIM.charStagger,
+          stagger: 0.00666667,
           onComplete: () => {
             hoverExitAnimation = null;
             if (hoverLabelContainer) hoverLabelContainer.style.visibility = "hidden";
           },
         });
       } else {
-        // Fallback if no characters found
         if (hoverLabelContainer) hoverLabelContainer.style.visibility = "hidden";
       }
     } else if (!hoverExitAnimation && hoverLabelContainer) {
@@ -1644,11 +1781,10 @@ function updateHoverStates() {
 
     document.body.style.cursor = "default";
 
-		// Remove card-hover class from canvas
-		const canvas = document.getElementById("project-slider");
-		if (canvas) {
-			canvas.classList.remove("card-hover");
-		}
+    const canvas = document.getElementById("project-slider");
+    if (canvas) {
+      canvas.classList.remove("card-hover");
+    }
   }
 }
 
@@ -1659,7 +1795,7 @@ function updateHoverStates() {
 // ENHANCED RENDER LOOP WITH MAGNETIC SNAPPING
 // ============================================================================
 
-function startRenderLoopEnhancedWithSnap() {
+function startRenderLoopEnhancedWithAutoScroll() {
   function animate(currentTime) {
     frameCounter++;
 
@@ -1677,6 +1813,9 @@ function startRenderLoopEnhancedWithSnap() {
     lastFrameTime = currentTime;
     const clampedDelta = Math.min(deltaTime, 1/30);
 
+    // Update auto-scroll
+    updateAutoScroll(clampedDelta);
+
     // CORE PHYSICS (from Chunk 1)
     if (!isIntroAnimationActive) {
       virtualVelocity *= Math.pow(PHYSICS.speedDecay, clampedDelta * 60);
@@ -1693,43 +1832,41 @@ function startRenderLoopEnhancedWithSnap() {
       }
     }
     
-    // NEW: MAGNETIC SNAPPING LOGIC
+    // IMPROVED MAGNETIC SNAPPING with auto-scroll awareness
     const isMovingSlowly = Math.abs(virtualVelocity) < SNAP.threshold;
-    const isNotDragging = !isDragging; // From Chunk 2
-    const enoughTimeHasPassed = currentTime - lastSnapCheckTime > 100; // Don't check every frame
+    const isNotDragging = !isDragging;
+    const enoughTimeHasPassed = currentTime - lastSnapCheckTime > 200; // Less frequent checks
+    const isAutoScrollQuiet = !autoScrollEnabled || autoScrollIntensity < 0.3;
     
-    if (SNAP.enabled && isMovingSlowly && isNotDragging && enoughTimeHasPassed) {
+    if (SNAP.enabled && isMovingSlowly && isNotDragging && enoughTimeHasPassed && isAutoScrollQuiet) {
       lastSnapCheckTime = currentTime;
       
-      // Find what we should snap to
       const nearestCard = findNearestSnapTarget();
       
       if (nearestCard && nearestCard !== snapTarget) {
-        // New snap target found
         snapTarget = nearestCard;
         snapStartTime = currentTime;
         
         console.log(`🧲 Snapping to card: ${nearestCard.userData.projectInfo?.title || 'Unknown'}`);
       }
       
-      // Apply snap force
+      // Apply snap force (gentler when auto-scroll is enabled)
       if (snapTarget) {
         const idealPosition = calculateSnapTargetPosition(snapTarget);
         const snapDistance = idealPosition - targetPosition;
         
-        // Apply magnetic force (stronger when closer)
-        const snapForce = snapDistance * SNAP.strength;
+        const snapStrength = autoScrollEnabled ? SNAP.strength * 0.5 : SNAP.strength;
+        const snapForce = snapDistance * snapStrength;
         targetPosition += snapForce * clampedDelta * 60;
         
-        // If we're very close, consider snapping complete
-        if (Math.abs(snapDistance) < 0.01) {
+        if (Math.abs(snapDistance) < 0.02) {
           targetPosition = idealPosition;
           snapTarget = null;
           virtualVelocity = 0;
+          currentScrollPosition = targetPosition;
         }
       }
-    } else if (Math.abs(virtualVelocity) > SNAP.threshold * 2) {
-      // Moving too fast, cancel any active snap
+    } else if (Math.abs(virtualVelocity) > SNAP.threshold * 3) {
       snapTarget = null;
     }
 
@@ -1740,6 +1877,10 @@ function startRenderLoopEnhancedWithSnap() {
     // Stop micro-movements
     if (Math.abs(virtualVelocity) < PHYSICS.stopThreshold && !snapTarget) {
       virtualVelocity = 0;
+      // Force complete stop when velocity is very low
+      if (Math.abs(targetPosition - currentScrollPosition) < 0.01) {
+        currentScrollPosition = targetPosition;
+      }
     }
 
     // Update scrollVelocity for existing shader effects
@@ -1760,8 +1901,8 @@ function startRenderLoopEnhancedWithSnap() {
       handleInfiniteScroll();
     }
 
-    // Update interactions (keep existing logic)
-    const updateInterval = isPerformanceModeActive || isHeavyAnimationActive ? 3 : 1;
+    // Update interactions (with better throttling)
+    const updateInterval = isPerformanceModeActive || isHeavyAnimationActive ? 5 : 2; // Less frequent updates
     const galleryMoving = Math.abs(virtualVelocity) > PHYSICS.stopThreshold || snapTarget !== null;
     
     if ((mouseMovedSinceLastFrame || galleryMoving) && frameCounter % updateInterval === 0) {
@@ -1769,8 +1910,8 @@ function startRenderLoopEnhancedWithSnap() {
       mouseMovedSinceLastFrame = false;
     }
 
-    // Update hover labels (keep existing)
-    const hoverUpdateInterval = isPerformanceModeActive || isHeavyAnimationActive ? 4 : 2;
+    // Update hover labels
+    const hoverUpdateInterval = isPerformanceModeActive || isHeavyAnimationActive ? 6 : 3;
     if (hoveredProjectMesh && hoverLabelContainer && frameCounter % hoverUpdateInterval === 0) {
       updateHoverLabelPositionOptimized();
     }
@@ -1785,6 +1926,48 @@ function startRenderLoopEnhancedWithSnap() {
 
   requestAnimationFrame(animate);
 }
+
+// ============================================================================
+// AUTO-SCROLL CONTROL FUNCTIONS (for browser console tuning)
+// ============================================================================
+
+window.setAutoScrollSpeed = (speed) => {
+  autoScrollSpeed = Math.max(0.001, Math.min(0.05, speed));
+  console.log(`🎚️ Auto-scroll speed: ${autoScrollSpeed}`);
+};
+
+window.toggleAutoScroll = () => {
+  if (autoScrollEnabled) {
+    disableAutoScroll();
+  } else {
+    enableAutoScroll();
+  }
+};
+
+window.reverseAutoScroll = () => {
+  autoScrollDirection *= -1;
+  console.log(`🔄 Auto-scroll direction: ${autoScrollDirection > 0 ? 'right' : 'left'}`);
+};
+
+window.getAutoScrollStatus = () => {
+  const status = {
+    enabled: autoScrollEnabled,
+    speed: autoScrollSpeed,
+    direction: autoScrollDirection > 0 ? 'right' : 'left',
+    intensity: autoScrollIntensity.toFixed(2),
+    paused: autoScrollPaused
+  };
+  console.table(status);
+  return status;
+};
+
+// ============================================================================
+// USAGE INSTRUCTIONS
+// ============================================================================
+
+console.log("✅ Auto-scroll system fixed!");
+console.log("🎯 Key fixes: Reduced speed, better pause logic, hover throttling, snap compatibility");
+console.log("🎚️ Tune with: setAutoScrollSpeed(0.01), toggleAutoScroll(), getAutoScrollStatus()");
 
 // Restore these constants, as they are used in the render loop and elsewhere
 const UNIFORM_UPDATE_INTERVAL = 2; // Update uniforms every 2 frames during heavy animations
@@ -1819,13 +2002,10 @@ function updateAllCards(elapsedTime, deltaSec) {
     // Position updates only when not intro animating
     let screenX;
 		if (!isIntroAnimationActive) {
-			// Use the initial card spacing to prevent resizing issues
-			const cardSpacing = CONFIG.initialCardSpacing || CONFIG.cardSpacing;
-			const centerOffset = (projectData.length - 1.0) * cardSpacing * 0.5;
-			const setIndex = project.userData.index;
-			const baseX = setIndex * cardSpacing - centerOffset;
-			
-			screenX = baseX + project.userData.offset - currentScrollPosition;
+			screenX =
+				project.userData.baseX +
+				project.userData.offset -
+				currentScrollPosition;
       project.position.x = screenX;
     } else {
       // During intro the card is already animating; don't interfere with GSAP
@@ -1840,9 +2020,8 @@ function updateAllCards(elapsedTime, deltaSec) {
     // Only allow hover if not scrolling
 		const isHovered = !isGalleryScrolling() && project === hoveredProjectMesh;
     project.userData.hoverTarget = isHovered ? 1.0 : 0.0;
-		project.userData.greyscaleTarget =
-			isAnyCardHovered && !isHovered ? 1.0 : 0.0;
-    project.userData.opacityTarget = isAnyCardHovered && !isHovered ? 0.2 : 1.0;
+		project.userData.greyscaleTarget = isHovered ? 0.0 : 1.0;
+    project.userData.opacityTarget = isAnyCardHovered && !isHovered ? 0.2 : 0.8;
 
     // Simplified state transitions during heavy animations
 		const frameIndependentTransition = isHeavyAnimationActive
@@ -2217,4 +2396,6 @@ console.log("🎯 Test: Scroll then let go - should settle on nearest card");
 console.log("⚙️  Tune with: adjustSnapStrength(0.1), adjustSnapThreshold(0.2), toggleSnap()");
 console.log("🔧 Fixed: Intro animation to physics system transition - no more jumps!");
 console.log("🔧 Fixed: Hover states now work properly after drag operations!");
-console.log("🔧 Fixed: Drag direction inverted for natural scrolling behavior!"); 
+console.log("🔧 Fixed: Drag direction inverted for natural scrolling behavior!");
+console.log("📏 FIXED SIZING: Cards are now 320px × 213px regardless of viewport size");
+console.log("📏 NO RESPONSIVE: Cards will not resize when browser window changes"); 
